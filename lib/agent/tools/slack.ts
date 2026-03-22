@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { tool } from "ai";
-import { z } from "zod";
+import { tool, jsonSchema } from "ai";
 import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as slackClient from "@/lib/api-clients/slack";
 
@@ -13,11 +12,15 @@ export function createSlackTools(
     readSlackMessages: tool({
       description:
         "Read recent messages from a Slack channel. Set channelName to 'list' to list available channels.",
-      parameters: z.object({
-        channelName: z.string().describe("Channel name to read (without #). Use 'list' to list available channels."),
-        limit: z.number().describe("Number of messages to fetch, between 1 and 50"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          channelName: { type: "string", description: "Channel name to read (without #). Use 'list' to list available channels." },
+          limit: { type: "number", description: "Number of messages to fetch, between 1 and 50" },
+        },
+        required: ["channelName", "limit"],
       }),
-      execute: async ({ channelName, limit }) => {
+      execute: async ({ channelName, limit }: { channelName: string; limit: number }) => {
         const tokenResult = await exchangeToken("slack");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
@@ -25,13 +28,13 @@ export function createSlackTools(
           const channels = await slackClient.listChannels(
             tokenResult.data.accessToken
           );
-          return { channels: channels.map((c) => c.name) };
+          return { channels: channels.map((c: any) => c.name) };
         }
 
         const channels = await slackClient.listChannels(
           tokenResult.data.accessToken
         );
-        const channel = channels.find((c) => c.name === channelName);
+        const channel = channels.find((c: any) => c.name === channelName);
         if (!channel) return { error: `Channel #${channelName} not found` };
 
         const messages = await slackClient.readMessages(
@@ -47,11 +50,15 @@ export function createSlackTools(
     sendSlackMessage: tool({
       description:
         "Send a message to a Slack channel. If HITL is enabled, returns a pending approval.",
-      parameters: z.object({
-        channelName: z.string().describe("Channel name (without #)"),
-        text: z.string().describe("Message text to send"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          channelName: { type: "string", description: "Channel name (without #)" },
+          text: { type: "string", description: "Message text to send" },
+        },
+        required: ["channelName", "text"],
       }),
-      execute: async ({ channelName, text }) => {
+      execute: async ({ channelName, text }: { channelName: string; text: string }) => {
         if (hitlEnabled) {
           return {
             requiresApproval: true,
@@ -67,7 +74,7 @@ export function createSlackTools(
         const channels = await slackClient.listChannels(
           tokenResult.data.accessToken
         );
-        const channel = channels.find((c) => c.name === channelName);
+        const channel = channels.find((c: any) => c.name === channelName);
         if (!channel) return { error: `Channel #${channelName} not found` };
 
         await slackClient.sendMessage(

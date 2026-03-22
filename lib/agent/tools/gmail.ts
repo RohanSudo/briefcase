@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { tool } from "ai";
-import { z } from "zod";
+import { tool, jsonSchema } from "ai";
 import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as gmailClient from "@/lib/api-clients/gmail";
 
@@ -13,10 +12,14 @@ export function createGmailTools(
     checkEmail: tool({
       description:
         "Read recent emails from the user's Gmail inbox. Returns subject, sender, snippet, and date.",
-      parameters: z.object({
-        maxResults: z.number().describe("Number of emails to fetch, between 1 and 20"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          maxResults: { type: "number", description: "Number of emails to fetch, between 1 and 20" },
+        },
+        required: ["maxResults"],
       }),
-      execute: async ({ maxResults }) => {
+      execute: async ({ maxResults }: { maxResults: number }) => {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
@@ -26,7 +29,7 @@ export function createGmailTools(
         );
 
         return {
-          emails: emails.map((e) => ({
+          emails: emails.map((e: any) => ({
             from: e.from,
             subject: e.subject,
             snippet: e.snippet,
@@ -40,12 +43,16 @@ export function createGmailTools(
     sendEmail: tool({
       description:
         "Send an email on behalf of the user. If HITL is enabled, this will return a pending approval instead of sending immediately.",
-      parameters: z.object({
-        to: z.string().describe("Recipient email address"),
-        subject: z.string().describe("Email subject line"),
-        body: z.string().describe("Email body text"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          to: { type: "string", description: "Recipient email address" },
+          subject: { type: "string", description: "Email subject line" },
+          body: { type: "string", description: "Email body text" },
+        },
+        required: ["to", "subject", "body"],
       }),
-      execute: async ({ to, subject, body }) => {
+      execute: async ({ to, subject, body }: { to: string; subject: string; body: string }) => {
         if (hitlEnabled) {
           return {
             requiresApproval: true,

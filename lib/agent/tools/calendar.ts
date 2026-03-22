@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { tool } from "ai";
-import { z } from "zod";
+import { tool, jsonSchema } from "ai";
 import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as calendarClient from "@/lib/api-clients/calendar";
 
@@ -13,10 +12,14 @@ export function createCalendarTools(
     getCalendarEvents: tool({
       description:
         "Get upcoming calendar events. Returns event title, time, location, and attendees.",
-      parameters: z.object({
-        maxResults: z.number().describe("Max events to return, between 1 and 20"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          maxResults: { type: "number", description: "Max events to return, between 1 and 20" },
+        },
+        required: ["maxResults"],
       }),
-      execute: async ({ maxResults }) => {
+      execute: async ({ maxResults }: { maxResults: number }) => {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
@@ -34,15 +37,19 @@ export function createCalendarTools(
     createCalendarEvent: tool({
       description:
         "Create a new calendar event. If HITL is enabled, returns a pending approval.",
-      parameters: z.object({
-        summary: z.string().describe("Event title"),
-        start: z.string().describe("Start time (ISO 8601)"),
-        end: z.string().describe("End time (ISO 8601)"),
-        description: z.string().describe("Event description, empty string if none"),
-        attendees: z.string().describe("Comma-separated list of attendee email addresses, empty string if none"),
+      parameters: jsonSchema({
+        type: "object" as const,
+        properties: {
+          summary: { type: "string", description: "Event title" },
+          start: { type: "string", description: "Start time (ISO 8601)" },
+          end: { type: "string", description: "End time (ISO 8601)" },
+          description: { type: "string", description: "Event description, empty string if none" },
+          attendees: { type: "string", description: "Comma-separated attendee emails, empty string if none" },
+        },
+        required: ["summary", "start", "end", "description", "attendees"],
       }),
-      execute: async ({ summary, start, end, description, attendees }) => {
-        const attendeeList = attendees ? attendees.split(",").map((a) => a.trim()).filter(Boolean) : [];
+      execute: async ({ summary, start, end, description, attendees }: { summary: string; start: string; end: string; description: string; attendees: string }) => {
+        const attendeeList = attendees ? attendees.split(",").map((a: string) => a.trim()).filter(Boolean) : [];
 
         if (hitlEnabled) {
           return {
