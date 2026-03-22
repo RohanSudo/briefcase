@@ -48,7 +48,7 @@ export function ChatView({
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-20 pb-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-20 pb-2">
         <div className="max-w-[800px] mx-auto">
           {visibleMessages.length === 0 && !isLoading && (
             <motion.div

@@ -21,15 +21,15 @@ export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) 
     >
       <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
         {!isUser && (
-          <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 ml-1">
+          <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground mb-1.5 ml-1" style={{ fontFamily: "var(--font-mono)", fontWeight: 500 }}>
             Briefcase
           </span>
         )}
         <div
-          className={`px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+          className={`px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap font-normal ${
             isUser
               ? "bg-[#0e7490] text-cyan-50 rounded-[16px_16px_4px_16px]"
-              : "bg-card border border-border text-gray-300 rounded-[16px_16px_16px_4px]"
+              : "bg-card border border-border text-gray-200 rounded-[16px_16px_16px_4px]"
           }`}
         >
           {isUser ? (

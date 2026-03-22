@@ -37,7 +37,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
   };
 
   return (
-    <div className="px-4 pb-4 pt-2">
+    <div className="px-4 pb-4 pt-0">
       <div className="max-w-[800px] mx-auto relative">
         <div className="bg-card border border-border rounded-2xl flex items-end px-4 py-3 gap-3 focus-within:border-primary/40 transition-colors">
           <textarea
