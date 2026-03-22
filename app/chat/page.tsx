@@ -30,7 +30,18 @@ export default function ChatPage() {
   const [userEmail, setUserEmail] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-  const { messages, sendMessage, setMessages, status } = useChat();
+  const { messages, sendMessage, setMessages, status, error } = useChat({
+    api: "/api/test",
+  });
+
+  // Debug: log errors and messages
+  useEffect(() => {
+    if (error) console.error("useChat error:", error);
+  }, [error]);
+
+  useEffect(() => {
+    console.log("messages:", JSON.stringify(messages.map(m => ({ id: m.id, role: m.role, parts: m.parts })), null, 2));
+  }, [messages]);
 
   const isLoading = status === "submitted" || status === "streaming";
 
