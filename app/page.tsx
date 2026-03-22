@@ -51,7 +51,7 @@ export default function LandingPage() {
           <br />
           <span className="text-primary">your rules</span>
         </h1>
-        <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-lg mx-auto mb-8">
+        <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-lg mx-auto mb-8 font-normal">
           briefcase connects to your email, calendar, and Slack. It reads,
           summarizes, and takes action -- with full transparency and your
           approval.
@@ -83,7 +83,7 @@ export default function LandingPage() {
             <h3 className="font-heading text-sm font-semibold text-foreground mb-1.5">
               {feature.title}
             </h3>
-            <p className="text-[12px] text-muted-foreground leading-relaxed">
+            <p className="text-[12px] text-gray-400 leading-relaxed font-normal">
               {feature.description}
             </p>
           </motion.div>

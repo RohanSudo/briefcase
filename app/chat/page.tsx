@@ -28,23 +28,43 @@ export default function ChatPage() {
   const [hitlEnabled, setHitlEnabled] = useState(false);
   const [userName, setUserName] = useState("User");
   const [userEmail, setUserEmail] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   const { messages, sendMessage, setMessages, status } = useChat();
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Fetch user profile from Auth0
+  // Fetch user profile from Auth0 -- redirect if not logged in
   useEffect(() => {
     fetch("/auth/profile")
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) {
+          // Not authenticated -- redirect to login
+          window.location.href = "/auth/login";
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data) {
           setUserName(data.name || data.nickname || "User");
           setUserEmail(data.email || "");
+          setIsAuthenticated(true);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        window.location.href = "/auth/login";
+      });
   }, []);
+
+  // Show nothing while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm">Loading...</p>
+      </div>
+    );
+  }
 
   const handleSend = (text: string) => {
     if (!text.trim() || isLoading) return;
