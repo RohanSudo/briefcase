@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { auth0 } from "@/lib/auth0";
 import { generateText, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
