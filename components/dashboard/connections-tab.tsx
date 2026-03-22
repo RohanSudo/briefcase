@@ -99,18 +99,16 @@ export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps
               </p>
             )}
 
-            {/* Reconnect button */}
-            {conn.status !== "connected" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onReconnect(conn.provider)}
-                className="text-primary hover:text-primary/80 gap-1.5 h-7 text-xs"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Reconnect
-              </Button>
-            )}
+            {/* Connect/Reconnect button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onReconnect(conn.provider)}
+              className="text-primary hover:text-primary/80 gap-1.5 h-7 text-xs"
+            >
+              <RefreshCw className="h-3 w-3" />
+              {conn.status === "connected" ? "Reconnect" : "Connect"}
+            </Button>
           </motion.div>
         );
       })}
