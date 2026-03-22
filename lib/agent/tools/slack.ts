@@ -12,17 +12,16 @@ export function createSlackTools(
   return {
     readSlackMessages: tool({
       description:
-        "Read recent messages from a Slack channel. If channelName is not provided, lists available channels.",
+        "Read recent messages from a Slack channel. Set channelName to 'list' to list available channels.",
       parameters: z.object({
-        channelName: z.string().describe("Channel name to read (without #). Leave empty to list channels."),
-        limit: z.number().describe("Number of messages to fetch. Defaults to 20."),
-      }).partial(),
-      execute: async (params) => {
-        const { channelName, limit = 20 } = params as { channelName?: string; limit?: number };
+        channelName: z.string().describe("Channel name to read (without #). Use 'list' to list available channels."),
+        limit: z.number().describe("Number of messages to fetch, between 1 and 50"),
+      }),
+      execute: async ({ channelName, limit }) => {
         const tokenResult = await exchangeToken("slack");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
-        if (!channelName) {
+        if (channelName === "list" || !channelName) {
           const channels = await slackClient.listChannels(
             tokenResult.data.accessToken
           );
@@ -38,7 +37,7 @@ export function createSlackTools(
         const messages = await slackClient.readMessages(
           tokenResult.data.accessToken,
           channel.id,
-          limit
+          limit || 20
         );
 
         return { channel: channelName, messages };

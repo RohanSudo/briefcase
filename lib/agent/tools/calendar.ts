@@ -12,22 +12,19 @@ export function createCalendarTools(
   return {
     getCalendarEvents: tool({
       description:
-        "Get upcoming calendar events. Returns event title, time, location, and attendees. All parameters are optional.",
+        "Get upcoming calendar events. Returns event title, time, location, and attendees.",
       parameters: z.object({
-        timeMin: z.string().describe("Start of time range (ISO 8601). Defaults to now."),
-        timeMax: z.string().describe("End of time range (ISO 8601). Defaults to 7 days from now."),
-        maxResults: z.number().describe("Max events to return. Defaults to 10."),
-      }).partial(),
-      execute: async (params) => {
-        const { timeMin, timeMax, maxResults = 10 } = params as { timeMin?: string; timeMax?: string; maxResults?: number };
+        maxResults: z.number().describe("Max events to return, between 1 and 20"),
+      }),
+      execute: async ({ maxResults }) => {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
         const events = await calendarClient.getEvents(
           tokenResult.data.accessToken,
-          timeMin || undefined,
-          timeMax || undefined,
-          maxResults
+          undefined,
+          undefined,
+          maxResults || 10
         );
 
         return { events };
@@ -41,17 +38,18 @@ export function createCalendarTools(
         summary: z.string().describe("Event title"),
         start: z.string().describe("Start time (ISO 8601)"),
         end: z.string().describe("End time (ISO 8601)"),
-        description: z.string().describe("Event description").optional(),
-        attendees: z.array(z.string()).describe("List of attendee email addresses").optional(),
+        description: z.string().describe("Event description, empty string if none"),
+        attendees: z.string().describe("Comma-separated list of attendee email addresses, empty string if none"),
       }),
-      execute: async (params) => {
-        const { summary, start, end, description, attendees } = params as { summary: string; start: string; end: string; description?: string; attendees?: string[] };
+      execute: async ({ summary, start, end, description, attendees }) => {
+        const attendeeList = attendees ? attendees.split(",").map((a) => a.trim()).filter(Boolean) : [];
+
         if (hitlEnabled) {
           return {
             requiresApproval: true,
             action: "createCalendarEvent",
-            details: { summary, start, end, description, attendees },
-            message: `I'd like to create this event:\n\nTitle: ${summary}\nWhen: ${start} to ${end}${attendees?.length ? `\nAttendees: ${attendees.join(", ")}` : ""}`,
+            details: { summary, start, end, description, attendees: attendeeList },
+            message: `I'd like to create this event:\n\nTitle: ${summary}\nWhen: ${start} to ${end}${attendeeList.length ? `\nAttendees: ${attendeeList.join(", ")}` : ""}`,
           };
         }
 
@@ -63,8 +61,8 @@ export function createCalendarTools(
           summary,
           start,
           end,
-          description,
-          attendees
+          description || undefined,
+          attendeeList.length ? attendeeList : undefined
         );
 
         return { created: true, event };

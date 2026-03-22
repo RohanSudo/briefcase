@@ -14,16 +14,15 @@ export function createGmailTools(
       description:
         "Read recent emails from the user's Gmail inbox. Returns subject, sender, snippet, and date.",
       parameters: z.object({
-        maxResults: z.number().describe("Number of emails to fetch. Defaults to 5."),
-      }).partial(),
-      execute: async (params) => {
-        const { maxResults = 5 } = params as { maxResults?: number };
+        maxResults: z.number().describe("Number of emails to fetch, between 1 and 20"),
+      }),
+      execute: async ({ maxResults }) => {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
         const emails = await gmailClient.readEmails(
           tokenResult.data.accessToken,
-          maxResults
+          maxResults || 5
         );
 
         return {

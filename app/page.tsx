@@ -46,7 +46,7 @@ export default function LandingPage() {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         className="text-center max-w-2xl relative z-10"
       >
-        <h1 className="font-heading text-5xl md:text-7xl font-semibold leading-none mb-6" style={{ letterSpacing: "-0.03em" }}>
+        <h1 className="font-heading text-5xl md:text-7xl font-bold leading-none mb-6" style={{ letterSpacing: "-0.03em" }}>
           your AI assistant,
           <br />
           <span className="text-primary">your rules</span>
