@@ -12,6 +12,22 @@ interface ChatViewProps {
   onSend: (message: string) => void;
 }
 
+function getMessageText(msg: UIMessage): string {
+  // Try parts first (AI SDK v6 format)
+  if (msg.parts && msg.parts.length > 0) {
+    const text = msg.parts
+      .filter((part): part is { type: "text"; text: string } => part.type === "text")
+      .map((part) => part.text)
+      .join("");
+    if (text) return text;
+  }
+  // Fallback to content field if it exists
+  if ("content" in msg && typeof (msg as any).content === "string") {
+    return (msg as any).content;
+  }
+  return "";
+}
+
 export function ChatView({
   messages,
   isLoading,
@@ -25,12 +41,16 @@ export function ChatView({
     }
   }, [messages, isLoading]);
 
+  const visibleMessages = messages.filter(
+    (msg) => msg.role === "user" || msg.role === "assistant"
+  );
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-20 pb-4">
         <div className="max-w-[800px] mx-auto">
-          {messages.length === 0 && (
+          {visibleMessages.length === 0 && !isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -47,27 +67,18 @@ export function ChatView({
             </motion.div>
           )}
 
-          {messages
-            .filter((msg) => msg.role === "user" || msg.role === "assistant")
-            .map((msg) => {
-              // Extract text content from parts
-              const textContent = msg.parts
-                .filter((part): part is { type: "text"; text: string } => part.type === "text")
-                .map((part) => part.text)
-                .join("");
+          {visibleMessages.map((msg) => {
+            const text = getMessageText(msg);
+            return (
+              <MessageBubble
+                key={msg.id}
+                role={msg.role as "user" | "assistant"}
+                content={text || (msg.role === "assistant" ? "..." : "")}
+              />
+            );
+          })}
 
-              if (!textContent && msg.role === "assistant") return null;
-
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  role={msg.role as "user" | "assistant"}
-                  content={textContent}
-                />
-              );
-            })}
-
-          {isLoading && messages[messages.length - 1]?.role === "user" && (
+          {isLoading && visibleMessages[visibleMessages.length - 1]?.role === "user" && (
             <TypingIndicator />
           )}
         </div>
