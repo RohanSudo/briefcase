@@ -5,6 +5,6 @@ export const auth0 = new Auth0Client({
     audience: process.env.AUTH0_AUDIENCE,
     scope: "openid profile email offline_access",
   },
-  // Enable the /auth/connect endpoint for linking third-party accounts via Token Vault
+  signInReturnToPath: "/chat",
   enableConnectAccountEndpoint: true,
 });
