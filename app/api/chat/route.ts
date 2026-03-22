@@ -34,12 +34,22 @@ export async function POST(req: Request) {
       return new Response("Messages array required", { status: 400 });
     }
 
+    const userId = session.user.sub ?? "";
     const modelMessages = toModelMessages(messages);
+
+    const gmailTools = createGmailTools(userId, "default", false);
+    const calendarTools = createCalendarTools(userId, "default", false);
+    const slackTools = createSlackTools(userId, "default", false);
 
     const result = streamText({
       model: openai("gpt-4o-mini"),
       system: buildSystemPrompt(),
       messages: modelMessages,
+      tools: {
+        ...gmailTools,
+        ...calendarTools,
+        ...slackTools,
+      },
     });
 
     return result.toUIMessageStreamResponse();
