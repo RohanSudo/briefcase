@@ -1,10 +1,26 @@
 import { auth0 } from "@/lib/auth0";
-import { streamText } from "ai";
+import { streamText, type UIMessage, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { buildSystemPrompt } from "@/lib/agent/system-prompt";
 import { createGmailTools } from "@/lib/agent/tools/gmail";
 import { createCalendarTools } from "@/lib/agent/tools/calendar";
 import { createSlackTools } from "@/lib/agent/tools/slack";
+
+// Convert UIMessage[] (from useChat) to ModelMessage[] (for streamText)
+function toModelMessages(uiMessages: UIMessage[]): ModelMessage[] {
+  return uiMessages.map((msg) => {
+    // Extract text from parts
+    const textParts = msg.parts
+      ?.filter((p) => p.type === "text")
+      .map((p) => (p as { type: "text"; text: string }).text)
+      .join("") || "";
+
+    return {
+      role: msg.role as "user" | "assistant" | "system",
+      content: textParts,
+    };
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +35,7 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.sub ?? "";
+    const modelMessages = toModelMessages(messages);
 
     const gmailTools = createGmailTools(userId, "default", false);
     const calendarTools = createCalendarTools(userId, "default", false);
@@ -27,7 +44,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: openai("gpt-4o-mini"),
       system: buildSystemPrompt(),
-      messages,
+      messages: modelMessages,
       tools: {
         ...gmailTools,
         ...calendarTools,
