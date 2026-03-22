@@ -56,11 +56,11 @@ export default function LandingPage() {
           summarizes, and takes action -- with full transparency and your
           approval.
         </p>
-        <Link href="/chat">
+        <a href="/auth/login?returnTo=/chat">
           <Button className="bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg px-8 py-3 text-sm font-medium transition-all">
             Get Started
           </Button>
-        </Link>
+        </a>
       </motion.div>
 
       {/* Feature cards */}
