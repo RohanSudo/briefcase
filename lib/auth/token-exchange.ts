@@ -23,7 +23,7 @@ export async function exchangeToken(
   | { ok: true; data: TokenExchangeResult }
   | { ok: false; error: TokenExchangeError }
 > {
-  const connectionName = provider === "google" ? "google-oauth2" : "slack";
+  const connectionName = provider === "google" ? "google-oauth2" : "sign-in-with-slack";
 
   try {
     const result = await auth0.getAccessTokenForConnection({

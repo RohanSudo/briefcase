@@ -84,7 +84,7 @@ export default function ChatPage() {
   };
 
   const handleReconnect = (provider: string) => {
-    const connectionName = provider === "google" ? "google-oauth2" : "slack";
+    const connectionName = provider === "google" ? "google-oauth2" : "sign-in-with-slack";
     window.location.href = `/auth/connect?connection=${connectionName}&returnTo=/chat`;
   };
 
