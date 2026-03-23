@@ -48,7 +48,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
             placeholder="Ask Briefcase anything..."
             disabled={isLoading}
             rows={1}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)]"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-snug py-0 my-0"
           />
           <AnimatePresence>
             {value.trim() && (
