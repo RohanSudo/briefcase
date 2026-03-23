@@ -100,6 +100,9 @@
   html {
     @apply font-sans;
   }
+  button, a, [role="button"], [role="tab"], [role="checkbox"], [role="switch"], label[for], summary, select {
+    cursor: pointer;
+  }
 }
 
 /* Glassmorphism utilities */
