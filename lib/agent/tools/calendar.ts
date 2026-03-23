@@ -11,26 +11,28 @@ export function createCalendarTools(
   return {
     getCalendarEvents: tool({
       description:
-        "Get upcoming calendar events. Returns event title, time, location, and attendees.",
+        "Get calendar events in a time range. Use ISO 8601 dates for timeMin/timeMax. For 'today', use today's date at 00:00 to 23:59. For 'Friday evening', use that Friday at 16:00 to 23:59.",
       parameters: jsonSchema({
         type: "object" as const,
         properties: {
+          timeMin: { type: "string", description: "Start of time range (ISO 8601). Required." },
+          timeMax: { type: "string", description: "End of time range (ISO 8601). Required." },
           maxResults: { type: "number", description: "Max events to return, between 1 and 20" },
         },
-        required: ["maxResults"],
+        required: ["timeMin", "timeMax", "maxResults"],
       }),
-      execute: async ({ maxResults }: { maxResults: number }) => {
+      execute: async ({ timeMin, timeMax, maxResults }: { timeMin: string; timeMax: string; maxResults: number }) => {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok) return { error: tokenResult.error.message };
 
         const events = await calendarClient.getEvents(
           tokenResult.data.accessToken,
-          undefined,
-          undefined,
+          timeMin,
+          timeMax,
           maxResults || 10
         );
 
-        return { events };
+        return { events, timeRange: { from: timeMin, to: timeMax } };
       },
     }),
 

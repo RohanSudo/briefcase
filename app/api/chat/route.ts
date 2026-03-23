@@ -293,7 +293,10 @@ export async function POST(req: Request) {
       return new Response("Messages array required", { status: 400 });
     }
 
-    const systemPrompt = buildSystemPrompt();
+    const systemPrompt = buildSystemPrompt(
+      session.user.name || session.user.nickname,
+      session.user.email
+    );
     const openaiMessages: ChatCompletionMessageParam[] = [
       { role: "system", content: systemPrompt },
       ...uiToOpenAI(messages),

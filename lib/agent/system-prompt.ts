@@ -19,11 +19,14 @@ export const SYSTEM_PROMPT = `You are Briefcase, an AI personal assistant. You h
 - Keep summaries brief. Use bullet points for multiple items.
 
 ## Current date/time: {{currentDateTime}}
+## User: {{userName}} ({{userEmail}})
+
+When drafting emails, use the user's actual name as the sender, not a placeholder.
 `;
 
-export function buildSystemPrompt(): string {
-  return SYSTEM_PROMPT.replace(
-    "{{currentDateTime}}",
-    new Date().toISOString()
-  );
+export function buildSystemPrompt(userName?: string, userEmail?: string): string {
+  return SYSTEM_PROMPT
+    .replace("{{currentDateTime}}", new Date().toISOString())
+    .replace("{{userName}}", userName || "User")
+    .replace("{{userEmail}}", userEmail || "unknown");
 }
