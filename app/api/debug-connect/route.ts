@@ -17,7 +17,7 @@ export async function GET() {
 
       // Now simulate what handleConnectAccount does: call the /me/connected-accounts endpoint
       const issuer = `https://${process.env.AUTH0_DOMAIN}`;
-      const connectResponse = await fetch(`${issuer}/me/connected-accounts`, {
+      const connectResponse = await fetch(`${issuer}/me/v1/connected-accounts/connect`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${tokenResult.token}`,
@@ -25,7 +25,10 @@ export async function GET() {
         },
         body: JSON.stringify({
           connection: "google-oauth2",
-          redirect_uri: `https://briefcase-rohan.vercel.app/auth/connect`,
+          redirect_uri: `https://briefcase-rohan.vercel.app/auth/callback`,
+          state: "test-state-123",
+          code_challenge: "test-challenge",
+          code_challenge_method: "S256",
         }),
       });
 
