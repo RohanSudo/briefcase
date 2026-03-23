@@ -10,14 +10,30 @@ export async function GET() {
 
     // Try to get a token for the My Account API (what handleConnectAccount does internally)
     try {
-      const token = await auth0.getAccessToken({
+      const tokenResult = await auth0.getAccessToken({
         audience: `https://${process.env.AUTH0_DOMAIN}/me/`,
         scope: "create:me:connected_accounts",
       });
+
+      // Now simulate what handleConnectAccount does: call the /me/connected-accounts endpoint
+      const issuer = `https://${process.env.AUTH0_DOMAIN}`;
+      const connectResponse = await fetch(`${issuer}/me/connected-accounts`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${tokenResult.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          connection: "google-oauth2",
+          redirect_uri: `https://briefcase-rohan.vercel.app/auth/connect`,
+        }),
+      });
+
+      const connectBody = await connectResponse.text();
       return NextResponse.json({
-        success: true,
-        hasToken: !!token,
-        tokenPreview: token?.token?.substring(0, 20) + "...",
+        success: connectResponse.ok,
+        status: connectResponse.status,
+        body: connectBody,
       });
     } catch (tokenError: any) {
       return NextResponse.json({
