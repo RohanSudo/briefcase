@@ -205,44 +205,50 @@ async function executeTool(
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
+
+        // Always expand to full day to catch overlapping events
+        let queryMin = args.timeMin as string | undefined;
+        let queryMax = args.timeMax as string | undefined;
+        let fullDayMin = queryMin;
+        let fullDayMax = queryMax;
+
+        if (queryMin) {
+          const d = new Date(queryMin);
+          fullDayMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString();
+          fullDayMax = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
+        }
+
         const events = await calendarClient.getEvents(
           tokenResult.data.accessToken,
-          args.timeMin as string | undefined,
-          args.timeMax as string | undefined,
-          (args.maxResults as number) || 10
+          fullDayMin,
+          fullDayMax,
+          (args.maxResults as number) || 20
         );
-        // Compute availability verdict so the AI doesn't have to do time math
-        const queryStart = args.timeMin ? new Date(args.timeMin as string).getTime() : 0;
-        const queryEnd = args.timeMax ? new Date(args.timeMax as string).getTime() : 0;
-        const busySlots: string[] = [];
-        const freeSlots: string[] = [];
+
+        // Check specific time availability
+        const checkTime = queryMin ? new Date(queryMin as string).getTime() : 0;
+        const busyAt: string[] = [];
+        const freeAt: string[] = [];
 
         if (Array.isArray(events) && events.length > 0) {
           for (const evt of events) {
             const evtStart = new Date(evt.start).getTime();
             const evtEnd = new Date(evt.end).getTime();
-            busySlots.push(`BUSY: "${evt.summary}" from ${evt.start} to ${evt.end}`);
+            if (checkTime >= evtStart && checkTime < evtEnd) {
+              busyAt.push(`CONFLICT: The user has "${evt.summary}" from ${evt.start} to ${evt.end}. The user is BUSY at the requested time because this event covers it.`);
+            }
           }
-          // Check if the entire queried range is covered
-          const anyOverlap = events.some((evt) => {
-            const s = new Date(evt.start).getTime();
-            const e = new Date(evt.end).getTime();
-            return s < queryEnd && e > queryStart;
-          });
-          if (anyOverlap) {
-            freeSlots.push("VERDICT: The user is BUSY during part or all of the requested time range. They are NOT free.");
-          } else {
-            freeSlots.push("VERDICT: The user is FREE during the requested time range.");
-          }
-        } else {
-          freeSlots.push("VERDICT: No events found. The user is FREE during the requested time range.");
         }
 
+        const verdict = busyAt.length > 0
+          ? `VERDICT: BUSY. The user is NOT free. ${busyAt.join(" ")}`
+          : "VERDICT: FREE. No conflicting events at the requested time.";
+
         return JSON.stringify({
-          events,
-          busySlots,
-          availability: freeSlots,
-          _instruction: "Use the VERDICT above to answer the user. If the verdict says BUSY, the user is NOT free at ANY point during the busy event's duration."
+          allEventsOnDay: events,
+          conflicts: busyAt,
+          verdict,
+          _instruction: "ALWAYS use the VERDICT to answer. If it says BUSY, the user is NOT free. Do not override the verdict with your own judgment."
         });
       }
 
