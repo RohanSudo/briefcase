@@ -369,7 +369,7 @@ export async function POST(req: Request) {
         if (tokenResult.ok) {
           // Get today's and next 7 days events
           const now = new Date();
-          const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const weekLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
           const events = await calendarClient.getEvents(
             tokenResult.data.accessToken,
             now.toISOString(),
