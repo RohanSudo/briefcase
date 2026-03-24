@@ -289,6 +289,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { messages } = body;
 
+    // Read HITL setting from cookie
+    const cookieHeader = req.headers.get("cookie") || "";
+    const hitlMatch = cookieHeader.match(/hitl=(\d)/);
+    const hitlEnabled = hitlMatch ? hitlMatch[1] === "1" : true;
+
     if (!messages || !Array.isArray(messages)) {
       return new Response("Messages array required", { status: 400 });
     }
@@ -316,6 +321,10 @@ export async function POST(req: Request) {
 
     // Step 2: If the model requested tool calls, execute them and add results
     const extraMessages: ChatCompletionMessageParam[] = [];
+    const WRITE_ACTIONS = ["sendEmail", "createCalendarEvent", "sendSlackMessage"];
+    let hitlBlocked = false;
+    let hitlAction = "";
+    let hitlArgs: Record<string, unknown> = {};
 
     if (
       assistantMessage.tool_calls &&
@@ -331,12 +340,30 @@ export async function POST(req: Request) {
         if (toolCall.type !== "function") continue;
         const fnName = toolCall.function.name;
         const fnArgs = JSON.parse(toolCall.function.arguments);
-        const toolResult = await executeTool(fnName, fnArgs);
-        extraMessages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: toolResult,
-        });
+
+        // If HITL is enabled and this is a write action, block it
+        if (hitlEnabled && WRITE_ACTIONS.includes(fnName)) {
+          hitlBlocked = true;
+          hitlAction = fnName;
+          hitlArgs = fnArgs;
+          // Return a fake tool result that tells the AI to present an approval request
+          extraMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              requiresApproval: true,
+              action: fnName,
+              details: fnArgs,
+            }),
+          });
+        } else {
+          const toolResult = await executeTool(fnName, fnArgs);
+          extraMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: toolResult,
+          });
+        }
       }
     }
 
@@ -380,12 +407,29 @@ export async function POST(req: Request) {
         }
       }
 
-      // Add the tool context as a system-like injection via a user message
-      // that the model will use to formulate its response
-      streamMessages.push({
-        role: "user",
-        content: `[INTERNAL - Tool results for the previous request. Use these results to answer the user's question. Do not mention that you called tools or functions, just present the information naturally.]\n\n${toolContext.join("\n\n")}`,
-      });
+      // Add the tool context
+      if (hitlBlocked) {
+        // Build approval message for the frontend
+        const approvalJson = JSON.stringify({
+          action: hitlAction,
+          details: hitlArgs,
+          message: hitlAction === "sendEmail"
+            ? `Send email to ${hitlArgs.to}\nSubject: ${hitlArgs.subject}\n\n${hitlArgs.body}`
+            : hitlAction === "createCalendarEvent"
+            ? `Create event: ${hitlArgs.summary}\nWhen: ${hitlArgs.start} to ${hitlArgs.end}`
+            : `Post to Slack channel ${hitlArgs.channelId}: ${hitlArgs.text}`,
+        });
+
+        streamMessages.push({
+          role: "user",
+          content: `[INTERNAL - The action requires user approval. Present what you want to do clearly, then include this EXACT block at the end of your message so the UI can render approval buttons:\n\n[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]\n\nDescribe the action naturally before the block. Include the approval block at the very end.]`,
+        });
+      } else {
+        streamMessages.push({
+          role: "user",
+          content: `[INTERNAL - Tool results for the previous request. Use these results to answer the user's question. Do not mention that you called tools or functions, just present the information naturally.]\n\n${toolContext.join("\n\n")}`,
+        });
+      }
     }
 
     // Step 4: Stream the final response via AI SDK (no tools passed)

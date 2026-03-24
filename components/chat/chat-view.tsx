@@ -4,16 +4,26 @@ import { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { MessageBubble, TypingIndicator } from "./message-bubble";
 import { ChatInput } from "./chat-input";
+import { ApprovalCard } from "./approval-card";
 import type { UIMessage } from "ai";
+
+interface ApprovalData {
+  action: string;
+  details: Record<string, unknown>;
+  message: string;
+  status: "pending" | "approved" | "denied";
+}
 
 interface ChatViewProps {
   messages: UIMessage[];
   isLoading: boolean;
   onSend: (message: string) => void;
+  pendingApprovals?: Map<string, ApprovalData>;
+  onApprove?: (id: string) => void;
+  onDeny?: (id: string) => void;
 }
 
 function getMessageText(msg: UIMessage): string {
-  // Try parts first (AI SDK v6 format)
   if (msg.parts && msg.parts.length > 0) {
     const text = msg.parts
       .filter((part): part is { type: "text"; text: string } => part.type === "text")
@@ -21,17 +31,33 @@ function getMessageText(msg: UIMessage): string {
       .join("");
     if (text) return text;
   }
-  // Fallback to content field if it exists
   if ("content" in msg && typeof (msg as any).content === "string") {
     return (msg as any).content;
   }
   return "";
 }
 
+// Check if an assistant message contains an approval request
+function extractApproval(text: string): { action: string; details: Record<string, unknown>; message: string } | null {
+  try {
+    // Look for JSON approval blocks in the message
+    const match = text.match(/\[APPROVAL_REQUIRED\]([\s\S]*?)\[\/APPROVAL_REQUIRED\]/);
+    if (match) {
+      return JSON.parse(match[1]);
+    }
+  } catch {
+    // Not an approval message
+  }
+  return null;
+}
+
 export function ChatView({
   messages,
   isLoading,
   onSend,
+  pendingApprovals,
+  onApprove,
+  onDeny,
 }: ChatViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +95,47 @@ export function ChatView({
 
           {visibleMessages.map((msg) => {
             const text = getMessageText(msg);
+
+            // Check if this assistant message has an approval
+            if (msg.role === "assistant") {
+              const approval = extractApproval(text);
+              if (approval && pendingApprovals) {
+                const approvalId = msg.id;
+                const existing = pendingApprovals.get(approvalId);
+                const approvalStatus = existing?.status || "pending";
+
+                // Show the text before the approval block
+                const cleanText = text.replace(/\[APPROVAL_REQUIRED\][\s\S]*?\[\/APPROVAL_REQUIRED\]/, "").trim();
+
+                return (
+                  <div key={msg.id}>
+                    {cleanText && (
+                      <MessageBubble
+                        role="assistant"
+                        content={cleanText}
+                      />
+                    )}
+                    <ApprovalCard
+                      action={approval}
+                      status={approvalStatus}
+                      onApprove={() => {
+                        if (onApprove) {
+                          // Register the approval in pendingApprovals if not already there
+                          if (!existing) {
+                            // This will be handled by the parent
+                          }
+                          onApprove(approvalId);
+                        }
+                      }}
+                      onDeny={() => {
+                        if (onDeny) onDeny(approvalId);
+                      }}
+                    />
+                  </div>
+                );
+              }
+            }
+
             return (
               <MessageBubble
                 key={msg.id}

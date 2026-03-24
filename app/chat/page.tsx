@@ -8,11 +8,11 @@ import { DashboardPanel } from "@/components/dashboard/dashboard-panel";
 import type { Connection } from "@/components/dashboard/connections-tab";
 import type { ActivityEntry } from "@/components/dashboard/activity-log-tab";
 
-const MOCK_ACTIVITY: ActivityEntry[] = [];
-
 export default function ChatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [hitlEnabled, setHitlEnabled] = useState(false);
+  const [hitlEnabled, setHitlEnabled] = useState(true);
+  const [pendingApprovals, setPendingApprovals] = useState<Map<string, { action: string; details: Record<string, unknown>; message: string; status: "pending" | "approved" | "denied" }>>(new Map());
+  const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
   const [userName, setUserName] = useState("User");
   const [userEmail, setUserEmail] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -27,7 +27,34 @@ export default function ChatPage() {
     },
   });
 
+  // Sync hitlEnabled to a cookie so the server can read it
+  useEffect(() => {
+    document.cookie = `hitl=${hitlEnabled ? "1" : "0"}; path=/; SameSite=Lax`;
+  }, [hitlEnabled]);
+
   const isLoading = status === "submitted" || status === "streaming";
+
+  // Watch for approval blocks in messages and register them
+  useEffect(() => {
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      const text = msg.parts
+        ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+        .map((p) => p.text)
+        .join("") || "";
+      const match = text.match(/\[APPROVAL_REQUIRED\]([\s\S]*?)\[\/APPROVAL_REQUIRED\]/);
+      if (match && !pendingApprovals.has(msg.id)) {
+        try {
+          const data = JSON.parse(match[1]);
+          setPendingApprovals((prev) => {
+            const next = new Map(prev);
+            next.set(msg.id, { ...data, status: "pending" });
+            return next;
+          });
+        } catch { /* not valid json */ }
+      }
+    }
+  }, [messages, pendingApprovals]);
 
   // Fetch user profile from Auth0
   useEffect(() => {
@@ -83,6 +110,63 @@ export default function ChatPage() {
     sendMessage({ text });
   };
 
+  const handleApprove = async (approvalId: string) => {
+    const approval = pendingApprovals.get(approvalId);
+    if (!approval) return;
+    setPendingApprovals((prev) => {
+      const next = new Map(prev);
+      next.set(approvalId, { ...approval, status: "approved" });
+      return next;
+    });
+    // Execute the action
+    try {
+      const res = await fetch("/api/chat/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: approval.action, details: approval.details }),
+      });
+      const result = await res.json();
+      // Add activity log entry
+      setActivityLog((prev) => [
+        {
+          id: Date.now().toString(),
+          toolName: approval.action === "sendEmail" ? "Sent email" : approval.action === "createCalendarEvent" ? "Created event" : "Sent Slack message",
+          service: (approval.action.includes("Email") ? "gmail" : approval.action.includes("Calendar") ? "calendar" : "slack") as "gmail" | "calendar" | "slack",
+          createdAt: new Date().toISOString(),
+          status: result.error ? "error" as const : "approved" as const,
+          details: { message: approval.message },
+        },
+        ...prev,
+      ]);
+      // Add agent confirmation message
+      sendMessage({ text: result.error ? `Error: ${result.error}` : "Approved. Go ahead." });
+    } catch {
+      sendMessage({ text: "There was an error executing the action." });
+    }
+  };
+
+  const handleDeny = (approvalId: string) => {
+    const approval = pendingApprovals.get(approvalId);
+    if (!approval) return;
+    setPendingApprovals((prev) => {
+      const next = new Map(prev);
+      next.set(approvalId, { ...approval, status: "denied" });
+      return next;
+    });
+    setActivityLog((prev) => [
+      {
+        id: Date.now().toString(),
+        toolName: approval.action === "sendEmail" ? "Email blocked" : approval.action === "createCalendarEvent" ? "Event blocked" : "Slack message blocked",
+        service: (approval.action.includes("Email") ? "gmail" : approval.action.includes("Calendar") ? "calendar" : "slack") as "gmail" | "calendar" | "slack",
+        createdAt: new Date().toISOString(),
+        status: "denied" as const,
+        details: { message: approval.message },
+      },
+      ...prev,
+    ]);
+    sendMessage({ text: "I denied the action. Don't proceed with it." });
+  };
+
   const handleReconnect = (provider: string) => {
     const connectionName = provider === "google" ? "google-oauth2" : "sign-in-with-slack";
     window.location.href = `/auth/connect?connection=${connectionName}&returnTo=/chat`;
@@ -107,6 +191,9 @@ export default function ChatPage() {
           messages={messages}
           isLoading={isLoading}
           onSend={handleSend}
+          pendingApprovals={pendingApprovals}
+          onApprove={handleApprove}
+          onDeny={handleDeny}
         />
       </main>
 
@@ -114,7 +201,7 @@ export default function ChatPage() {
         isOpen={isPanelOpen}
         onClose={() => setIsPanelOpen(false)}
         connections={connections}
-        activityLog={MOCK_ACTIVITY}
+        activityLog={activityLog}
         hitlEnabled={hitlEnabled}
         onReconnect={handleReconnect}
         onToggleHitl={setHitlEnabled}
