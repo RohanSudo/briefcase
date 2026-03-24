@@ -10,7 +10,13 @@ import type { ActivityEntry } from "@/components/dashboard/activity-log-tab";
 
 export default function ChatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [hitlEnabled, setHitlEnabled] = useState(true);
+  const [hitlEnabled, setHitlEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("hitl");
+      return saved !== null ? saved === "1" : true;
+    }
+    return true;
+  });
   const [pendingApprovals, setPendingApprovals] = useState<Map<string, { action: string; details: Record<string, unknown>; message: string; status: "pending" | "approved" | "denied" }>>(new Map());
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
   const [userName, setUserName] = useState("User");
@@ -27,9 +33,10 @@ export default function ChatPage() {
     },
   });
 
-  // Sync hitlEnabled to a cookie so the server can read it
+  // Sync hitlEnabled to cookie (server) and localStorage (persistence)
   useEffect(() => {
     document.cookie = `hitl=${hitlEnabled ? "1" : "0"}; path=/; SameSite=Lax`;
+    localStorage.setItem("hitl", hitlEnabled ? "1" : "0");
   }, [hitlEnabled]);
 
   const isLoading = status === "submitted" || status === "streaming";
