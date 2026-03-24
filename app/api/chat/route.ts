@@ -402,7 +402,7 @@ export async function POST(req: Request) {
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
       const response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: allMessages,
         ...(isInternalDirective ? {} : { tools, tool_choice: "auto" as const }),
       });
@@ -518,7 +518,7 @@ export async function POST(req: Request) {
 
     // Step 4: Stream the final response via AI SDK (no tools passed)
     const result = streamText({
-      model: openaiProvider("gpt-4o-mini"),
+      model: openaiProvider("gpt-4o"),
       system: systemPrompt,
       messages: streamMessages,
     });
