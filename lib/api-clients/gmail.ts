@@ -2,6 +2,8 @@ const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 export interface Email {
   id: string;
+  threadId: string;
+  messageId: string;
   from: string;
   to: string;
   subject: string;
@@ -39,6 +41,8 @@ export async function readEmails(
 
       return {
         id: msgData.id,
+        threadId: msgData.threadId || "",
+        messageId: getHeader("Message-ID") || getHeader("Message-Id") || "",
         from: getHeader("From"),
         to: getHeader("To"),
         subject: getHeader("Subject"),
@@ -72,11 +76,29 @@ export async function sendEmail(
   accessToken: string,
   to: string,
   subject: string,
-  body: string
+  body: string,
+  replyTo?: { threadId: string; messageId: string }
 ): Promise<{ id: string; threadId: string }> {
+  const headers = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `Content-Type: text/plain; charset=utf-8`,
+  ];
+
+  // Add reply headers for threading
+  if (replyTo?.messageId) {
+    headers.push(`In-Reply-To: ${replyTo.messageId}`);
+    headers.push(`References: ${replyTo.messageId}`);
+  }
+
   const raw = Buffer.from(
-    `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`
+    `${headers.join("\r\n")}\r\n\r\n${body}`
   ).toString("base64url");
+
+  const payload: { raw: string; threadId?: string } = { raw };
+  if (replyTo?.threadId) {
+    payload.threadId = replyTo.threadId;
+  }
 
   const res = await fetch(`${GMAIL_BASE}/messages/send`, {
     method: "POST",
@@ -84,7 +106,7 @@ export async function sendEmail(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ raw }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Gmail send failed: ${res.status}`);
   return res.json();

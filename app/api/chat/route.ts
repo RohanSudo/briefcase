@@ -39,13 +39,15 @@ const tools: ChatCompletionTool[] = [
     function: {
       name: "sendEmail",
       description:
-        "Send an email from the user's Gmail account. Returns a confirmation with the message ID.",
+        "Send or reply to an email. When replying to an existing email, include the threadId and messageId from the original email to keep it in the same thread. Always reply in-thread when responding to an existing email.",
       parameters: {
         type: "object",
         properties: {
           to: { type: "string", description: "Recipient email address" },
-          subject: { type: "string", description: "Email subject line" },
+          subject: { type: "string", description: "Email subject line. For replies, use 'Re: <original subject>'" },
           body: { type: "string", description: "Plain-text email body" },
+          threadId: { type: "string", description: "Gmail thread ID from the original email (for replies)" },
+          messageId: { type: "string", description: "Message-ID header from the original email (for replies)" },
         },
         required: ["to", "subject", "body"],
       },
@@ -181,11 +183,15 @@ async function executeTool(
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
+        const replyTo = (args.threadId && args.messageId)
+          ? { threadId: args.threadId as string, messageId: args.messageId as string }
+          : undefined;
         const result = await gmailClient.sendEmail(
           tokenResult.data.accessToken,
           args.to as string,
           args.subject as string,
-          args.body as string
+          args.body as string,
+          replyTo
         );
         return JSON.stringify(result);
       }

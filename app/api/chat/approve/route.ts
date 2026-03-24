@@ -16,11 +16,15 @@ export async function POST(req: Request) {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return Response.json({ error: tokenResult.error.message }, { status: 400 });
+        const replyTo = (details.threadId && details.messageId)
+          ? { threadId: details.threadId, messageId: details.messageId }
+          : undefined;
         const result = await gmailClient.sendEmail(
           tokenResult.data.accessToken,
           details.to,
           details.subject,
-          details.body
+          details.body,
+          replyTo
         );
         return Response.json({ success: true, result });
       }
