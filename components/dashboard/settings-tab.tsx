@@ -41,14 +41,13 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
           </div>
           <button
             onClick={handleToggle}
-            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${
+            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 mt-0.5 cursor-pointer ${
               hitlEnabled ? "bg-primary" : "bg-zinc-600"
             }`}
           >
-            <motion.div
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
-              animate={{ left: hitlEnabled ? "calc(100% - 22px)" : "2px" }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            <div
+              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-[left] duration-200"
+              style={{ left: hitlEnabled ? "calc(100% - 22px)" : "2px" }}
             />
           </button>
         </div>
