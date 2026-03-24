@@ -84,11 +84,15 @@ export function ChatView({
               className="flex flex-col items-center justify-center h-[60vh] text-center"
             >
               <h2 className="font-heading text-2xl font-semibold text-foreground mb-2" style={{ letterSpacing: "-0.02em" }}>
-                good morning
+                {(() => {
+                  const hour = new Date().getHours();
+                  if (hour < 12) return "good morning";
+                  if (hour < 17) return "good afternoon";
+                  return "good evening";
+                })()}
               </h2>
               <p className="text-muted-foreground text-sm max-w-md">
-                I can check your email, calendar, and Slack. Ask me anything
-                about your day.
+                your email, calendar, and Slack -- all in one place. what do you need?
               </p>
             </motion.div>
           )}
