@@ -361,47 +361,52 @@ export async function POST(req: Request) {
     const lastUserText = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "";
     const isInternalDirective = lastUserText.startsWith("[INTERNAL:");
 
-    // Step 1: Non-streaming call with tools via OpenAI SDK directly
+    // Step 1: Multi-round tool call loop (up to 5 rounds)
     const client = getOpenAIClient();
-    const toolResponse = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: openaiMessages,
-      // Skip tools entirely for internal directives to prevent infinite loops
-      ...(isInternalDirective ? {} : { tools, tool_choice: "auto" as const }),
-    });
-
-    const choice = toolResponse.choices[0];
-    const assistantMessage = choice.message;
-
-    // Step 2: If the model requested tool calls, execute them and add results
-    const extraMessages: ChatCompletionMessageParam[] = [];
     const WRITE_ACTIONS = ["sendEmail", "createCalendarEvent", "sendSlackMessage"];
     let hitlBlocked = false;
     let hitlAction = "";
     let hitlArgs: Record<string, unknown> = {};
+    const allMessages = [...openaiMessages];
+    let lastAssistantContent = "";
+    const MAX_ROUNDS = 5;
 
-    if (
-      assistantMessage.tool_calls &&
-      assistantMessage.tool_calls.length > 0
-    ) {
-      extraMessages.push({
-        role: "assistant",
-        content: assistantMessage.content || null,
-        tool_calls: assistantMessage.tool_calls,
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      const response = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: allMessages,
+        ...(isInternalDirective ? {} : { tools, tool_choice: "auto" as const }),
       });
 
-      for (const toolCall of assistantMessage.tool_calls) {
+      const choice = response.choices[0];
+      const msg = choice.message;
+      lastAssistantContent = msg.content || "";
+
+      // No tool calls -- we're done
+      if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        break;
+      }
+
+      // Add assistant message with tool calls
+      allMessages.push({
+        role: "assistant",
+        content: msg.content || null,
+        tool_calls: msg.tool_calls,
+      });
+
+      // Execute each tool call
+      let roundBlocked = false;
+      for (const toolCall of msg.tool_calls) {
         if (toolCall.type !== "function") continue;
         const fnName = toolCall.function.name;
         const fnArgs = JSON.parse(toolCall.function.arguments);
 
-        // If HITL is enabled and this is a write action, block it
         if (hitlEnabled && WRITE_ACTIONS.includes(fnName)) {
           hitlBlocked = true;
+          roundBlocked = true;
           hitlAction = fnName;
           hitlArgs = fnArgs;
-          // Return a fake tool result that tells the AI to present an approval request
-          extraMessages.push({
+          allMessages.push({
             role: "tool",
             tool_call_id: toolCall.id,
             content: JSON.stringify({
@@ -412,14 +417,20 @@ export async function POST(req: Request) {
           });
         } else {
           const toolResult = await executeTool(fnName, fnArgs);
-          extraMessages.push({
+          allMessages.push({
             role: "tool",
             tool_call_id: toolCall.id,
             content: toolResult,
           });
         }
       }
+
+      // If HITL blocked a write action, stop the loop
+      if (roundBlocked) break;
     }
+
+    // Collect tool context from all messages beyond the original
+    const extraMessages = allMessages.slice(openaiMessages.length);
 
     // Step 3: Build the final message list for the streaming response
     // Convert everything to simple role/content pairs for AI SDK's streamText
@@ -438,25 +449,15 @@ export async function POST(req: Request) {
     }
 
     // If tools were called, add the tool context as an assistant turn
-    // so the streaming model has the data to work with
     if (extraMessages.length > 0) {
-      // Gather all tool results into a context string
       const toolContext: string[] = [];
-      if (assistantMessage.content) {
-        toolContext.push(assistantMessage.content);
+      if (lastAssistantContent) {
+        toolContext.push(lastAssistantContent);
       }
       for (const m of extraMessages) {
         if (m.role === "tool") {
-          const toolCallId = (m as { tool_call_id: string }).tool_call_id;
-          const matchingCall = assistantMessage.tool_calls?.find(
-            (tc) => tc.id === toolCallId
-          );
-          const toolName =
-            matchingCall && matchingCall.type === "function"
-              ? matchingCall.function.name
-              : "unknown";
           toolContext.push(
-            `[Tool result from ${toolName}]: ${typeof m.content === "string" ? m.content : JSON.stringify(m.content)}`
+            `[Tool result]: ${typeof m.content === "string" ? m.content : JSON.stringify(m.content)}`
           );
         }
       }
