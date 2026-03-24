@@ -10,13 +10,15 @@ import type { ActivityEntry } from "@/components/dashboard/activity-log-tab";
 
 export default function ChatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [hitlEnabled, setHitlEnabled] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("hitl");
-      return saved !== null ? saved === "1" : true;
+  const [hitlEnabled, setHitlEnabled] = useState(true);
+
+  // Load saved HITL preference after mount (avoids SSR hydration mismatch)
+  useEffect(() => {
+    const saved = localStorage.getItem("hitl");
+    if (saved !== null) {
+      setHitlEnabled(saved === "1");
     }
-    return true;
-  });
+  }, []);
   const [pendingApprovals, setPendingApprovals] = useState<Map<string, { action: string; details: Record<string, unknown>; message: string; status: "pending" | "approved" | "denied" }>>(new Map());
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
   const [userName, setUserName] = useState("User");
