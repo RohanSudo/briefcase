@@ -15,10 +15,18 @@ export interface Email {
 
 export async function readEmails(
   accessToken: string,
-  maxResults = 10
+  maxResults = 10,
+  unreadOnly = false
 ): Promise<Email[]> {
+  const params = new URLSearchParams({
+    maxResults: String(maxResults),
+    labelIds: "INBOX",
+  });
+  if (unreadOnly) {
+    params.append("q", "is:unread");
+  }
   const listRes = await fetch(
-    `${GMAIL_BASE}/messages?maxResults=${maxResults}&labelIds=INBOX`,
+    `${GMAIL_BASE}/messages?${params}`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!listRes.ok) throw new Error(`Gmail list failed: ${listRes.status}`);

@@ -21,13 +21,17 @@ const tools: ChatCompletionTool[] = [
     function: {
       name: "checkEmail",
       description:
-        "Read the user's recent Gmail inbox messages. Returns subjects, senders, snippets, and dates.",
+        "Read the user's Gmail inbox messages. Can filter for unread only. When the user says 'unread emails' or 'new emails', set unreadOnly to true.",
       parameters: {
         type: "object",
         properties: {
           maxResults: {
             type: "number",
             description: "How many emails to fetch (default 10, max 20)",
+          },
+          unreadOnly: {
+            type: "boolean",
+            description: "If true, only return unread emails. Default false.",
           },
         },
         required: [],
@@ -174,7 +178,8 @@ async function executeTool(
           return JSON.stringify({ error: tokenResult.error.message });
         const emails = await gmailClient.readEmails(
           tokenResult.data.accessToken,
-          (args.maxResults as number) || 10
+          (args.maxResults as number) || 10,
+          (args.unreadOnly as boolean) || false
         );
         return JSON.stringify(emails);
       }
