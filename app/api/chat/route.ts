@@ -410,6 +410,7 @@ export async function POST(req: Request) {
       const choice = response.choices[0];
       const msg = choice.message;
       lastAssistantContent = msg.content || "";
+      console.log(`Round ${round}: finish_reason=${choice.finish_reason}, tool_calls=${msg.tool_calls?.length || 0}, content=${(msg.content || "").substring(0, 100)}`);
 
       // No tool calls -- we're done
       if (!msg.tool_calls || msg.tool_calls.length === 0) {
@@ -492,6 +493,7 @@ export async function POST(req: Request) {
       }
 
       // Add the tool context
+      console.log("HITL status:", { hitlBlocked, hitlAction, extraMessagesCount: extraMessages.length });
       if (hitlBlocked) {
         // Return approval card directly -- don't rely on AI to output the block
         const approvalJson = JSON.stringify({
@@ -513,12 +515,12 @@ export async function POST(req: Request) {
         // Build the approval text with the block
         const approvalText = `${description}\n\n[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]`;
 
-        // Stream it using a simple echo prompt -- costs almost nothing
+        // Use streamText but with a harmless system prompt that won't trigger refusal
         const result = streamText({
           model: openaiProvider("gpt-4o-mini"),
           messages: [
-            { role: "system", content: "Repeat the following text EXACTLY as given. Do not change, add, or remove anything. Output it verbatim." },
-            { role: "user", content: approvalText },
+            { role: "system", content: "You are a text formatting assistant. Your only job is to output the exact text the user provides. Do not modify it." },
+            { role: "user", content: `Please format this notification:\n\n${approvalText}` },
           ],
         });
 
