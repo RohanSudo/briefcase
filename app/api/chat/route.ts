@@ -361,6 +361,35 @@ export async function POST(req: Request) {
     const lastUserText = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "";
     const isInternalDirective = lastUserText.startsWith("[INTERNAL:");
 
+    // Pre-fetch calendar data if user mentions calendar/schedule/free/busy
+    const calendarKeywords = /calendar|schedule|free|busy|available|meeting|event|appointment/i;
+    if (!isInternalDirective && calendarKeywords.test(lastUserText)) {
+      try {
+        const tokenResult = await exchangeToken("google");
+        if (tokenResult.ok) {
+          // Get today's and next 7 days events
+          const now = new Date();
+          const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const events = await calendarClient.getEvents(
+            tokenResult.data.accessToken,
+            now.toISOString(),
+            weekLater.toISOString(),
+            20
+          );
+          const calendarContext = events.map((evt: { summary: string; start: string; end: string }) =>
+            `- "${evt.summary}" from ${evt.start} to ${evt.end} (user is BUSY for the ENTIRE duration)`
+          ).join("\n");
+          // Inject calendar data into the conversation
+          openaiMessages.push({
+            role: "user",
+            content: `[INTERNAL - Calendar data for the next 7 days. Use this to determine availability. If ANY event overlaps with a requested time, the user is BUSY. Do not ignore this data.]\n\nEvents:\n${calendarContext || "No events scheduled."}`,
+          });
+        }
+      } catch {
+        // Calendar fetch failed, continue without it
+      }
+    }
+
     // Step 1: Multi-round tool call loop (up to 5 rounds)
     const client = getOpenAIClient();
     const WRITE_ACTIONS = ["sendEmail", "createCalendarEvent", "sendSlackMessage"];
