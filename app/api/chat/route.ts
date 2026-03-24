@@ -58,7 +58,7 @@ const tools: ChatCompletionTool[] = [
     function: {
       name: "getCalendarEvents",
       description:
-        "Fetch upcoming Google Calendar events. Returns title, time, location, and attendees.",
+        "Check if the user is free or busy during a time range. IMPORTANT: Always use a WIDE time range. To check if someone is free at 5pm, query from the START of that day (00:00) to the END (23:59) so you catch events that START BEFORE 5pm but EXTEND PAST it. Never use a narrow 15-minute window.",
       parameters: {
         type: "object",
         properties: {
