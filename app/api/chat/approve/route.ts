@@ -19,14 +19,27 @@ export async function POST(req: Request) {
         const replyTo = (details.threadId && details.messageId)
           ? { threadId: details.threadId, messageId: details.messageId }
           : undefined;
-        const result = await gmailClient.sendEmail(
-          tokenResult.data.accessToken,
-          details.to,
-          details.subject,
-          details.body,
-          replyTo
-        );
-        return Response.json({ success: true, result });
+        console.log("sendEmail approve:", { to: details.to, subject: details.subject, replyTo });
+        try {
+          const result = await gmailClient.sendEmail(
+            tokenResult.data.accessToken,
+            details.to,
+            details.subject,
+            details.body,
+            replyTo
+          );
+          return Response.json({ success: true, result });
+        } catch (e: unknown) {
+          // If reply fails (404), retry as a new email without threading
+          console.log("Reply failed, retrying as new email:", (e as Error).message);
+          const result = await gmailClient.sendEmail(
+            tokenResult.data.accessToken,
+            details.to,
+            details.subject,
+            details.body
+          );
+          return Response.json({ success: true, result });
+        }
       }
 
       case "createCalendarEvent": {

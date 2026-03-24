@@ -100,6 +100,11 @@ export function ChatView({
           {visibleMessages.map((msg) => {
             let text = getMessageText(msg);
 
+            // Hide internal messages from the user
+            if (msg.role === "user" && text.startsWith("[INTERNAL:")) {
+              return null;
+            }
+
             // Check if this assistant message has an approval
             if (msg.role === "assistant") {
               const approval = extractApproval(text);

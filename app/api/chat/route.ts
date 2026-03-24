@@ -379,10 +379,11 @@ export async function POST(req: Request) {
           const calendarContext = events.map((evt: { summary: string; start: string; end: string }) =>
             `- "${evt.summary}" from ${evt.start} to ${evt.end} (user is BUSY for the ENTIRE duration)`
           ).join("\n");
+          console.log("Calendar pre-fetch:", calendarContext || "No events");
           // Inject calendar data as a system message so it doesn't interfere with tool calling
           openaiMessages.splice(1, 0, {
             role: "system",
-            content: `Calendar data for the next 30 days. Use this to determine availability. If ANY event overlaps with a requested time, the user is BUSY:\n\n${calendarContext || "No events scheduled."}`,
+            content: `IMPORTANT CALENDAR DATA - The user's schedule for the next 30 days. You MUST use this data to determine availability. If a requested time falls within ANY event below, the user is BUSY at that time.\n\n${calendarContext || "No events scheduled."}`,
           } as ChatCompletionMessageParam);
         }
       } catch {
