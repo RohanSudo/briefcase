@@ -116,6 +116,21 @@ export default function ChatPage() {
 
   const handleSend = (text: string) => {
     if (!text.trim() || isLoading) return;
+
+    // Check if user is confirming a pending approval
+    const confirmWords = /^(send|ok|do it|yes|go ahead|approve|confirmed|send it|go|yep|yeah|sure)\.?$/i;
+    if (confirmWords.test(text.trim())) {
+      // Find the most recent pending approval
+      const pendingEntries = Array.from(pendingApprovals.entries()).filter(
+        ([, v]) => v.status === "pending"
+      );
+      if (pendingEntries.length > 0) {
+        const [approvalId] = pendingEntries[pendingEntries.length - 1];
+        handleApprove(approvalId);
+        return;
+      }
+    }
+
     sendMessage({ text });
   };
 
@@ -149,9 +164,9 @@ export default function ChatPage() {
       ]);
       // Add a confirmation message without re-triggering the AI tool loop
       if (result.error) {
-        sendMessage({ text: `Error executing the action: ${result.error}` });
+        sendMessage({ text: `[INTERNAL: Error executing the action: ${result.error}. Tell the user something went wrong. Do NOT call any tools.]` });
       } else {
-        sendMessage({ text: "[INTERNAL: The user approved the action. The action has already been executed. Simply confirm that it was done successfully. Do NOT call any tools.]" });
+        sendMessage({ text: "[INTERNAL: The user approved the action and it has been executed successfully. Confirm to the user that it's done. Do NOT call any tools. Do NOT try to send the email again.]" });
       }
     } catch {
       sendMessage({ text: "[INTERNAL: There was an error executing the approved action. Let the user know something went wrong. Do NOT call any tools.]" });

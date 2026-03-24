@@ -41,6 +41,9 @@ export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) 
                 strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
                 ul: ({ children }) => <ul className="list-disc pl-4 mb-2 last:mb-0 space-y-0.5">{children}</ul>,
                 li: ({ children }) => <li>{children}</li>,
+                code: ({ children }) => <code className="text-sm break-all whitespace-pre-wrap">{children}</code>,
+                pre: ({ children }) => <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>,
+                hr: () => <hr className="border-border my-3" />,
               }}
             >
               {content}

@@ -26,8 +26,19 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
     if (!trimmed || isLoading) return;
     onSend(trimmed);
     setValue("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      // Re-focus after sending
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
   };
+
+  // Auto-focus on mount and when loading completes
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
