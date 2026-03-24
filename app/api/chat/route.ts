@@ -380,10 +380,17 @@ export async function POST(req: Request) {
             `- "${evt.summary}" from ${evt.start} to ${evt.end} (user is BUSY for the ENTIRE duration)`
           ).join("\n");
           console.log("Calendar pre-fetch:", calendarContext || "No events");
-          // Inject calendar data as a system message so it doesn't interfere with tool calling
+          // Inject calendar data as a system message
           openaiMessages.splice(1, 0, {
             role: "system",
-            content: `IMPORTANT CALENDAR DATA - The user's schedule for the next 30 days. You MUST use this data to determine availability. If a requested time falls within ANY event below, the user is BUSY at that time.\n\n${calendarContext || "No events scheduled."}`,
+            content: `CRITICAL CALENDAR CONSTRAINT - You MUST check this before saying the user is free or writing any email about availability.
+
+${calendarContext || "No events scheduled."}
+
+RULES:
+1. If a time falls within ANY event's start-to-end range, the user is BUSY. Example: an event from 4pm to 10pm means the user is busy at 4pm, 5pm, 6pm, 7pm, 8pm, and 9pm.
+2. When writing emails about availability, if the user is BUSY, say they are BUSY and suggest rescheduling. NEVER say "I'm free" if any event overlaps.
+3. This data overrides any assumptions. Do NOT guess availability.`,
           } as ChatCompletionMessageParam);
         }
       } catch {

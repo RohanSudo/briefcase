@@ -87,20 +87,26 @@ export async function sendEmail(
   body: string,
   replyTo?: { threadId: string; messageId: string }
 ): Promise<{ id: string; threadId: string }> {
-  const headers = [
+  // For replies, ensure subject starts with "Re:"
+  let finalSubject = subject;
+  if (replyTo && !subject.toLowerCase().startsWith("re:")) {
+    finalSubject = `Re: ${subject}`;
+  }
+
+  const headerLines = [
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${finalSubject}`,
     `Content-Type: text/plain; charset=utf-8`,
   ];
 
   // Add reply headers for threading
   if (replyTo?.messageId) {
-    headers.push(`In-Reply-To: ${replyTo.messageId}`);
-    headers.push(`References: ${replyTo.messageId}`);
+    headerLines.push(`In-Reply-To: ${replyTo.messageId}`);
+    headerLines.push(`References: ${replyTo.messageId}`);
   }
 
   const raw = Buffer.from(
-    `${headers.join("\r\n")}\r\n\r\n${body}`
+    `${headerLines.join("\r\n")}\r\n\r\n${body}`
   ).toString("base64url");
 
   const payload: { raw: string; threadId?: string } = { raw };
@@ -116,6 +122,9 @@ export async function sendEmail(
     },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Gmail send failed: ${res.status}`);
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Gmail send failed: ${res.status} - ${errBody}`);
+  }
   return res.json();
 }
