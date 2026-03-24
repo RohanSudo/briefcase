@@ -518,7 +518,7 @@ export async function POST(req: Request) {
 
     // Step 4: Stream the final response via AI SDK (no tools passed)
     const result = streamText({
-      model: openaiProvider("gpt-4o"),
+      model: openaiProvider("gpt-4o-mini"),
       system: systemPrompt,
       messages: streamMessages,
     });
