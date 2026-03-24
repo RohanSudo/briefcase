@@ -493,7 +493,7 @@ export async function POST(req: Request) {
 
       // Add the tool context
       if (hitlBlocked) {
-        // Build approval message for the frontend
+        // Return approval card directly -- don't rely on AI to output the block
         const approvalJson = JSON.stringify({
           action: hitlAction,
           details: hitlArgs,
@@ -504,10 +504,25 @@ export async function POST(req: Request) {
             : `Post to Slack channel ${hitlArgs.channelId}: ${hitlArgs.text}`,
         });
 
-        streamMessages.push({
-          role: "user",
-          content: `[INTERNAL - The action requires user approval. Present what you want to do clearly, then include this EXACT block at the end of your message so the UI can render approval buttons:\n\n[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]\n\nDescribe the action naturally before the block. Include the approval block at the very end.]`,
+        const description = hitlAction === "sendEmail"
+          ? `I'd like to send this email reply.`
+          : hitlAction === "createCalendarEvent"
+          ? `I'd like to create this calendar event.`
+          : `I'd like to post this message to Slack.`;
+
+        // Build the approval text with the block
+        const approvalText = `${description}\n\n[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]`;
+
+        // Stream it using a simple echo prompt -- costs almost nothing
+        const result = streamText({
+          model: openaiProvider("gpt-4o-mini"),
+          messages: [
+            { role: "system", content: "Repeat the following text EXACTLY as given. Do not change, add, or remove anything. Output it verbatim." },
+            { role: "user", content: approvalText },
+          ],
         });
+
+        return result.toUIMessageStreamResponse();
       } else {
         streamMessages.push({
           role: "user",
