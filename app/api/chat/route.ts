@@ -446,10 +446,9 @@ RULES:
           hitlArgs = { ...fnArgs };
 
           // Server-side calendar validation for sendEmail
-          // If the AI says "free" but calendar shows busy, rewrite the email
           if (fnName === "sendEmail" && fnArgs.body) {
             const bodyLower = (fnArgs.body as string).toLowerCase();
-            const saysFree = bodyLower.includes("i'm free") || bodyLower.includes("i am free") || bodyLower.includes("free to hang") || bodyLower.includes("looking forward to it") || bodyLower.includes("looking forward to hanging");
+            const saysFree = bodyLower.includes("i'm free") || bodyLower.includes("i am free") || bodyLower.includes("free to hang") || bodyLower.includes("looking forward to it") || bodyLower.includes("looking forward to hanging") || bodyLower.includes("sounds great");
             if (saysFree) {
               try {
                 const calToken = await exchangeToken("google");
@@ -457,18 +456,21 @@ RULES:
                   const now = new Date();
                   const monthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
                   const events = await calendarClient.getEvents(calToken.data.accessToken, now.toISOString(), monthLater.toISOString(), 50);
-                  // Check if any event conflicts with the email's context (look for time mentions)
                   if (events && events.length > 0) {
-                    // The AI said "free" but there ARE events -- force a rewrite
                     const busyList = events.map((e: { summary: string; start: string; end: string }) => `${e.summary}: ${e.start} to ${e.end}`).join("; ");
-                    console.log("Calendar override: AI said free but events exist:", busyList);
-                    // Rewrite the email body
-                    hitlArgs.body = (fnArgs.body as string)
-                      .replace(/I'm free/gi, "I'm busy")
-                      .replace(/I am free/gi, "I am busy")
-                      .replace(/free to hang out/gi, "unable to make it")
-                      .replace(/Looking forward to it/gi, "Can we reschedule")
-                      .replace(/Looking forward to hanging/gi, "Unfortunately I have a conflict");
+                    console.log("Calendar override: rewriting email body. Events:", busyList);
+                    // Use GPT to rewrite the email properly
+                    const rewriteResponse = await client.chat.completions.create({
+                      model: "gpt-4o-mini",
+                      messages: [
+                        { role: "system", content: "Rewrite this email to decline the invitation because the user is BUSY. Keep the same tone and format but change the message to say they cannot make it and suggest rescheduling. Do NOT say they are free. Output ONLY the rewritten email body, nothing else." },
+                        { role: "user", content: `Original email:\n${fnArgs.body}\n\nThe user's calendar shows they are busy: ${busyList}` },
+                      ],
+                    });
+                    const rewritten = rewriteResponse.choices[0].message.content;
+                    if (rewritten) {
+                      hitlArgs.body = rewritten;
+                    }
                   }
                 }
               } catch { /* calendar check failed, proceed with original */ }
