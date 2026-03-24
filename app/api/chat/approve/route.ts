@@ -16,10 +16,25 @@ export async function POST(req: Request) {
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return Response.json({ error: tokenResult.error.message }, { status: 400 });
-        const replyTo = (details.threadId && details.messageId)
-          ? { threadId: details.threadId, messageId: details.messageId }
-          : undefined;
-        console.log("sendEmail approve:", { to: details.to, subject: details.subject, replyTo });
+
+        // Try to find the original email thread to reply in-thread
+        let replyTo: { threadId: string; messageId: string } | undefined;
+        try {
+          // Search for the original email by subject to get correct threadId
+          const subject = (details.subject as string || "").replace(/^Re:\s*/i, "");
+          const emails = await gmailClient.readEmails(tokenResult.data.accessToken, 5);
+          const match = emails.find(e =>
+            e.subject.toLowerCase().includes(subject.toLowerCase()) ||
+            subject.toLowerCase().includes(e.subject.toLowerCase())
+          );
+          if (match && match.threadId && match.messageId) {
+            replyTo = { threadId: match.threadId, messageId: match.messageId };
+            console.log("Found thread for reply:", replyTo);
+          }
+        } catch {
+          console.log("Thread lookup failed, sending as new email");
+        }
+
         try {
           const result = await gmailClient.sendEmail(
             tokenResult.data.accessToken,
@@ -30,7 +45,6 @@ export async function POST(req: Request) {
           );
           return Response.json({ success: true, result });
         } catch (e: unknown) {
-          // If reply fails (404), retry as a new email without threading
           console.log("Reply failed, retrying as new email:", (e as Error).message);
           const result = await gmailClient.sendEmail(
             tokenResult.data.accessToken,
