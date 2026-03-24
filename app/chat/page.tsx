@@ -138,10 +138,14 @@ export default function ChatPage() {
         },
         ...prev,
       ]);
-      // Add agent confirmation message
-      sendMessage({ text: result.error ? `Error: ${result.error}` : "Approved. Go ahead." });
+      // Add a confirmation message without re-triggering the AI tool loop
+      if (result.error) {
+        sendMessage({ text: `Error executing the action: ${result.error}` });
+      } else {
+        sendMessage({ text: "[INTERNAL: The user approved the action. The action has already been executed. Simply confirm that it was done successfully. Do NOT call any tools.]" });
+      }
     } catch {
-      sendMessage({ text: "There was an error executing the action." });
+      sendMessage({ text: "[INTERNAL: There was an error executing the approved action. Let the user know something went wrong. Do NOT call any tools.]" });
     }
   };
 

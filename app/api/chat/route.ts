@@ -200,7 +200,14 @@ async function executeTool(
           args.timeMax as string | undefined,
           (args.maxResults as number) || 10
         );
-        return JSON.stringify(events);
+        // Post-process: add explicit BUSY annotations so the AI respects event durations
+        const annotated = Array.isArray(events)
+          ? events.map((evt) => ({
+              ...evt,
+              _busyAnnotation: `BUSY from ${evt.start} to ${evt.end} — user is unavailable for the ENTIRE duration of "${evt.summary}"`,
+            }))
+          : events;
+        return JSON.stringify(annotated);
       }
 
       case "createCalendarEvent": {
@@ -307,13 +314,18 @@ export async function POST(req: Request) {
       ...uiToOpenAI(messages),
     ];
 
+    // Check if the latest user message is an internal directive (e.g. post-approval)
+    const lastUserMsg = openaiMessages.filter((m) => m.role === "user").pop();
+    const lastUserText = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "";
+    const isInternalDirective = lastUserText.startsWith("[INTERNAL:");
+
     // Step 1: Non-streaming call with tools via OpenAI SDK directly
     const client = getOpenAIClient();
     const toolResponse = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: openaiMessages,
-      tools,
-      tool_choice: "auto",
+      // Skip tools entirely for internal directives to prevent infinite loops
+      ...(isInternalDirective ? {} : { tools, tool_choice: "auto" as const }),
     });
 
     const choice = toolResponse.choices[0];

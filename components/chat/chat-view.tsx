@@ -94,7 +94,7 @@ export function ChatView({
           )}
 
           {visibleMessages.map((msg) => {
-            const text = getMessageText(msg);
+            let text = getMessageText(msg);
 
             // Check if this assistant message has an approval
             if (msg.role === "assistant") {
@@ -133,6 +133,11 @@ export function ChatView({
                     />
                   </div>
                 );
+              }
+
+              // Strip partial or complete APPROVAL_REQUIRED blocks that are still streaming
+              if (text.includes("[APPROVAL_REQUIRED")) {
+                text = text.substring(0, text.indexOf("[APPROVAL_REQUIRED")).trim();
               }
             }
 

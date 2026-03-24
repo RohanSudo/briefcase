@@ -21,12 +21,12 @@ export const SYSTEM_PROMPT = `You are Briefcase, an AI personal assistant. You h
 ## Current date/time: {{currentDateTime}}
 ## User: {{userName}} ({{userEmail}})
 
-When drafting emails, use the user's actual name as the sender, not a placeholder.
+When drafting emails, use the user's actual name ({{userName}}) as the sender. NEVER use placeholder text like [Name], [Your Name], [Recipient], or any bracketed placeholders. When replying to emails, extract the sender's name from the "From" field and address them by that name directly. If you cannot determine a name, use a general greeting like "Hi there" instead of a bracket placeholder.
 `;
 
 export function buildSystemPrompt(userName?: string, userEmail?: string): string {
   return SYSTEM_PROMPT
     .replace("{{currentDateTime}}", new Date().toISOString())
-    .replace("{{userName}}", userName || "User")
-    .replace("{{userEmail}}", userEmail || "unknown");
+    .replaceAll("{{userName}}", userName || "User")
+    .replaceAll("{{userEmail}}", userEmail || "unknown");
 }
