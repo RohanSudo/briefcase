@@ -39,7 +39,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
   return (
     <div className="px-4 pb-4 pt-0">
       <div className="max-w-[800px] mx-auto relative">
-        <div className="bg-card border border-border rounded-2xl flex items-end px-4 py-3 gap-3 focus-within:border-primary/40 transition-colors">
+        <div className="bg-card border border-border rounded-2xl flex items-center px-4 py-2.5 gap-3 focus-within:border-primary/40 transition-colors">
           <textarea
             ref={textareaRef}
             value={value}
@@ -48,7 +48,8 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
             placeholder="Ask Briefcase anything..."
             disabled={isLoading}
             rows={1}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-snug py-0 my-0"
+            style={{ minHeight: "20px", height: "20px" }}
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-[1.4] py-0 my-0 block"
           />
           <AnimatePresence>
             {value.trim() && (
