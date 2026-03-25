@@ -33,30 +33,6 @@ export default function ChatPage() {
     onError: (err) => {
       console.error("useChat onError:", err);
     },
-    onResponse: (response) => {
-      const activityHeader = response.headers.get("X-Activity");
-      if (activityHeader) {
-        try {
-          const entries = JSON.parse(decodeURIComponent(activityHeader)) as Array<{
-            toolName: string;
-            service: string;
-            status: string;
-            details?: Record<string, unknown>;
-          }>;
-          setActivityLog((prev) => [
-            ...entries.map((e, i) => ({
-              id: `${Date.now()}-${i}`,
-              toolName: e.toolName,
-              service: e.service as "gmail" | "calendar" | "slack",
-              status: e.status as "auto" | "approved" | "denied" | "error",
-              details: e.details,
-              createdAt: new Date().toISOString(),
-            })),
-            ...prev,
-          ]);
-        } catch { /* ignore parse errors */ }
-      }
-    },
   });
 
   // Sync hitlEnabled to cookie (server) and localStorage (persistence)
@@ -67,7 +43,8 @@ export default function ChatPage() {
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Watch for approval blocks in messages and register them
+  // Watch for approval blocks and activity blocks in messages
+  const [processedActivityIds, setProcessedActivityIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
@@ -75,10 +52,12 @@ export default function ChatPage() {
         ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
         .map((p) => p.text)
         .join("") || "";
-      const match = text.match(/\[APPROVAL_REQUIRED\]([\s\S]*?)\[\/APPROVAL_REQUIRED\]/);
-      if (match && !pendingApprovals.has(msg.id)) {
+
+      // Parse approval blocks
+      const approvalMatch = text.match(/\[APPROVAL_REQUIRED\]([\s\S]*?)\[\/APPROVAL_REQUIRED\]/);
+      if (approvalMatch && !pendingApprovals.has(msg.id)) {
         try {
-          const data = JSON.parse(match[1]);
+          const data = JSON.parse(approvalMatch[1]);
           setPendingApprovals((prev) => {
             const next = new Map(prev);
             next.set(msg.id, { ...data, status: "pending" });
@@ -86,8 +65,33 @@ export default function ChatPage() {
           });
         } catch { /* not valid json */ }
       }
+
+      // Parse activity blocks
+      const activityMatch = text.match(/\[ACTIVITY\]([\s\S]*?)\[\/ACTIVITY\]/);
+      if (activityMatch && !processedActivityIds.has(msg.id)) {
+        try {
+          const entries = JSON.parse(activityMatch[1]) as Array<{
+            toolName: string;
+            service: string;
+            status: string;
+            details?: Record<string, unknown>;
+          }>;
+          setProcessedActivityIds((prev) => new Set(prev).add(msg.id));
+          setActivityLog((prev) => [
+            ...entries.map((e, i) => ({
+              id: `${msg.id}-${i}`,
+              toolName: e.toolName,
+              service: e.service as "gmail" | "calendar" | "slack",
+              status: e.status as "auto" | "approved" | "denied" | "error",
+              details: e.details,
+              createdAt: new Date().toISOString(),
+            })),
+            ...prev,
+          ]);
+        } catch { /* not valid json */ }
+      }
     }
-  }, [messages, pendingApprovals]);
+  }, [messages, pendingApprovals, processedActivityIds]);
 
   // Fetch user profile from Auth0
   useEffect(() => {

@@ -550,10 +550,20 @@ RULES:
         }
       }
 
+      // Build activity block for embedding in stream
+      const activityBlock = activityEntries.length > 0
+        ? `[ACTIVITY]${JSON.stringify(activityEntries)}[/ACTIVITY]`
+        : "";
+
       // Add the tool context
       console.log("HITL status:", { hitlBlocked, hitlAction, extraMessagesCount: extraMessages.length });
       if (hitlBlocked) {
-        // Return approval card directly -- don't rely on AI to output the block
+        // Add HITL action to activity
+        const hitlService = hitlAction.includes("Email") ? "gmail" : hitlAction.includes("Calendar") ? "calendar" : "slack";
+        activityEntries.push({ toolName: hitlAction, service: hitlService, status: "pending", details: hitlArgs as Record<string, unknown> });
+        const hitlActivityBlock = `[ACTIVITY]${JSON.stringify(activityEntries)}[/ACTIVITY]`;
+
+        // Return approval card directly
         const approvalJson = JSON.stringify({
           action: hitlAction,
           details: hitlArgs,
@@ -564,8 +574,8 @@ RULES:
             : `Post to Slack channel ${hitlArgs.channelId}: ${hitlArgs.text}`,
         });
 
-        // Build the approval text -- just the block, no prefix text that shows before card loads
-        const approvalText = `[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]`;
+        // Build the approval text with activity data
+        const approvalText = `${hitlActivityBlock}[APPROVAL_REQUIRED]${approvalJson}[/APPROVAL_REQUIRED]`;
 
         // Use streamText but with a harmless system prompt that won't trigger refusal
         const result = streamText({
@@ -576,14 +586,11 @@ RULES:
           ],
         });
 
-        const activityHeader = activityEntries.length > 0 ? encodeURIComponent(JSON.stringify(activityEntries)) : "";
-        const resp = result.toUIMessageStreamResponse();
-        if (activityHeader) resp.headers.set("X-Activity", activityHeader);
-        return resp;
+        return result.toUIMessageStreamResponse();
       } else {
         streamMessages.push({
           role: "user",
-          content: `[INTERNAL - Tool results for the previous request. Use these results to answer the user's question. Do not mention that you called tools or functions, just present the information naturally.]\n\n${toolContext.join("\n\n")}`,
+          content: `[INTERNAL - Tool results for the previous request. Use these results to answer the user's question. Do not mention that you called tools or functions, just present the information naturally. IMPORTANT: Start your response with EXACTLY this text (no modifications): ${activityBlock} Then continue with your normal response.]\n\n${toolContext.join("\n\n")}`,
         });
       }
     }
@@ -595,10 +602,7 @@ RULES:
       messages: streamMessages,
     });
 
-    const activityHeader = activityEntries.length > 0 ? encodeURIComponent(JSON.stringify(activityEntries)) : "";
-    const resp = result.toUIMessageStreamResponse();
-    if (activityHeader) resp.headers.set("X-Activity", activityHeader);
-    return resp;
+    return result.toUIMessageStreamResponse();
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Chat API error:", err.message, err.stack);

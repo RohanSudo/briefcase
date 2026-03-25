@@ -114,7 +114,10 @@ export function ChatView({
                 const approvalStatus = existing?.status || "pending";
 
                 // Show the text before the approval block
-                const cleanText = text.replace(/\[APPROVAL_REQUIRED\][\s\S]*?\[\/APPROVAL_REQUIRED\]/, "").trim();
+                const cleanText = text
+                  .replace(/\[ACTIVITY\][\s\S]*?\[\/ACTIVITY\]/, "")
+                  .replace(/\[APPROVAL_REQUIRED\][\s\S]*?\[\/APPROVAL_REQUIRED\]/, "")
+                  .trim();
 
                 return (
                   <div key={msg.id}>
@@ -142,6 +145,13 @@ export function ChatView({
                     />
                   </div>
                 );
+              }
+
+              // Strip ACTIVITY blocks
+              text = text.replace(/\[ACTIVITY\][\s\S]*?\[\/ACTIVITY\]/, "").trim();
+              // Strip partial ACTIVITY blocks still streaming
+              if (text.includes("[ACTIVITY")) {
+                text = text.substring(0, text.indexOf("[ACTIVITY")).trim();
               }
 
               // Strip partial or complete APPROVAL_REQUIRED blocks that are still streaming
