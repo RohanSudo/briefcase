@@ -19,7 +19,7 @@ interface ChatViewProps {
   isLoading: boolean;
   onSend: (message: string) => void;
   pendingApprovals?: Map<string, ApprovalData>;
-  onApprove?: (id: string) => void;
+  onApprove?: (id: string, editedDetails?: Record<string, unknown>) => void;
   onDeny?: (id: string) => void;
 }
 
@@ -130,13 +130,9 @@ export function ChatView({
                     <ApprovalCard
                       action={approval}
                       status={approvalStatus}
-                      onApprove={() => {
+                      onApprove={(editedDetails) => {
                         if (onApprove) {
-                          // Register the approval in pendingApprovals if not already there
-                          if (!existing) {
-                            // This will be handled by the parent
-                          }
-                          onApprove(approvalId);
+                          onApprove(approvalId, editedDetails);
                         }
                       }}
                       onDeny={() => {

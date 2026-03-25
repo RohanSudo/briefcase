@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Mail, Calendar, MessageSquare } from "lucide-react";
+import { Check, X, Mail, Calendar, MessageSquare, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,7 +14,7 @@ interface ApprovalAction {
 
 interface ApprovalCardProps {
   action: ApprovalAction;
-  onApprove: () => void;
+  onApprove: (editedDetails?: Record<string, unknown>) => void;
   onDeny: () => void;
   status?: "pending" | "approved" | "denied";
 }
@@ -26,39 +26,43 @@ function getActionIcon(action: string) {
   return <Mail className="h-3.5 w-3.5" />;
 }
 
-function ActionDetails({ action, details }: { action: string; details: Record<string, unknown> }) {
-  if (action === "sendEmail") {
+function EditableDetailRow({
+  label,
+  value,
+  multiline,
+  editing,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+  editing: boolean;
+  onChange: (val: string) => void;
+}) {
+  if (editing) {
     return (
-      <div className="space-y-2 text-sm">
-        <DetailRow label="To" value={details.to as string} />
-        <DetailRow label="Subject" value={details.subject as string} />
-        <DetailRow label="Body" value={details.body as string} multiline />
-      </div>
-    );
-  }
-  if (action === "createCalendarEvent") {
-    return (
-      <div className="space-y-2 text-sm">
-        <DetailRow label="Title" value={details.summary as string} />
-        <DetailRow label="When" value={`${details.start} to ${details.end}`} />
-        {Array.isArray(details.attendees) && (
-          <DetailRow label="Attendees" value={(details.attendees as string[]).join(", ")} />
+      <div>
+        <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.15em] text-muted-foreground shrink-0">
+          {label}:
+        </span>
+        {multiline ? (
+          <textarea
+            className="w-full mt-1 bg-background border border-border rounded-md p-2 text-sm text-gray-300 resize-none min-h-[80px]"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={4}
+          />
+        ) : (
+          <input
+            className="w-full mt-1 bg-background border border-border rounded-md px-2 py-1 text-sm text-gray-300"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
         )}
       </div>
     );
   }
-  if (action === "sendSlackMessage") {
-    return (
-      <div className="space-y-2 text-sm">
-        <DetailRow label="Channel" value={`#${details.channelName}`} />
-        <DetailRow label="Message" value={details.text as string} multiline />
-      </div>
-    );
-  }
-  return null;
-}
 
-function DetailRow({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) {
   return (
     <div className={multiline ? "" : "flex gap-2"}>
       <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.15em] text-muted-foreground shrink-0">
@@ -73,6 +77,16 @@ function DetailRow({ label, value, multiline }: { label: string; value: string; 
 
 export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: ApprovalCardProps) {
   const isPending = status === "pending";
+  const [editing, setEditing] = useState(false);
+  const [editedDetails, setEditedDetails] = useState<Record<string, unknown>>({ ...action.details });
+
+  const updateField = (key: string, value: string) => {
+    setEditedDetails((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleApprove = () => {
+    onApprove(editing ? editedDetails : undefined);
+  };
 
   return (
     <motion.div
@@ -92,11 +106,39 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
             <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.15em] text-warning">
               Action Requires Approval
             </span>
+            {isPending && !editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="ml-auto text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Edit before sending"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Action details */}
           <div className="mb-4 pl-1">
-            <ActionDetails action={action.action} details={action.details} />
+            {action.action === "sendEmail" && (
+              <div className="space-y-2 text-sm">
+                <EditableDetailRow label="To" value={(editedDetails.to as string) || ""} editing={editing} onChange={(v) => updateField("to", v)} />
+                <EditableDetailRow label="Subject" value={(editedDetails.subject as string) || ""} editing={editing} onChange={(v) => updateField("subject", v)} />
+                <EditableDetailRow label="Body" value={(editedDetails.body as string) || ""} multiline editing={editing} onChange={(v) => updateField("body", v)} />
+              </div>
+            )}
+            {action.action === "createCalendarEvent" && (
+              <div className="space-y-2 text-sm">
+                <EditableDetailRow label="Title" value={(editedDetails.summary as string) || ""} editing={editing} onChange={(v) => updateField("summary", v)} />
+                <EditableDetailRow label="Start" value={(editedDetails.start as string) || ""} editing={editing} onChange={(v) => updateField("start", v)} />
+                <EditableDetailRow label="End" value={(editedDetails.end as string) || ""} editing={editing} onChange={(v) => updateField("end", v)} />
+              </div>
+            )}
+            {action.action === "sendSlackMessage" && (
+              <div className="space-y-2 text-sm">
+                <EditableDetailRow label="Channel" value={(editedDetails.channelId as string) || ""} editing={editing} onChange={(v) => updateField("channelId", v)} />
+                <EditableDetailRow label="Message" value={(editedDetails.text as string) || ""} multiline editing={editing} onChange={(v) => updateField("text", v)} />
+              </div>
+            )}
           </div>
 
           {/* Buttons or status */}
@@ -104,21 +146,34 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
             <div className="flex gap-2">
               <Button
                 size="sm"
-                onClick={onApprove}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg gap-1.5"
+                onClick={handleApprove}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg gap-1.5 cursor-pointer"
               >
                 <Check className="h-3.5 w-3.5" />
-                Approve
+                {editing ? "Send Edited" : "Approve"}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={onDeny}
-                className="border-destructive/50 text-destructive hover:bg-destructive/10 rounded-lg gap-1.5"
+                className="border-destructive/50 text-destructive hover:bg-destructive/10 rounded-lg gap-1.5 cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
                 Deny
               </Button>
+              {editing && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(false);
+                    setEditedDetails({ ...action.details });
+                  }}
+                  className="rounded-lg gap-1.5 cursor-pointer"
+                >
+                  Cancel Edit
+                </Button>
+              )}
             </div>
           ) : (
             <Badge

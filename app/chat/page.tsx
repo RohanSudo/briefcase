@@ -162,12 +162,13 @@ export default function ChatPage() {
     sendMessage({ text });
   };
 
-  const handleApprove = async (approvalId: string) => {
+  const handleApprove = async (approvalId: string, editedDetails?: Record<string, unknown>) => {
     const approval = pendingApprovals.get(approvalId);
     if (!approval) return;
+    const finalDetails = editedDetails || approval.details;
     setPendingApprovals((prev) => {
       const next = new Map(prev);
-      next.set(approvalId, { ...approval, status: "approved" });
+      next.set(approvalId, { ...approval, details: finalDetails, status: "approved" });
       return next;
     });
     // Execute the action
@@ -175,7 +176,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: approval.action, details: approval.details }),
+        body: JSON.stringify({ action: approval.action, details: finalDetails }),
       });
       const result = await res.json();
       // Add activity log entry
