@@ -56,6 +56,15 @@ export async function POST(req: Request) {
           console.log("Thread lookup failed:", (e as Error).message);
         }
 
+        // Log what we're about to send
+        console.log("Sending email:", {
+          to: details.to,
+          subject: details.subject,
+          hasReplyTo: !!replyTo,
+          threadId: replyTo?.threadId,
+          messageId: replyTo?.messageId?.substring(0, 30),
+        });
+
         try {
           const result = await gmailClient.sendEmail(
             tokenResult.data.accessToken,
@@ -64,21 +73,20 @@ export async function POST(req: Request) {
             details.body,
             replyTo
           );
+          console.log("Email sent as reply:", { resultThreadId: result.threadId });
           return Response.json({ success: true, result, isReply: !!replyTo });
-        } catch (e: unknown) {
-          console.log("Reply failed, retrying as new email:", (e as Error).message);
-          // Fallback: send as new email but log it
-          try {
-            const result = await gmailClient.sendEmail(
-              tokenResult.data.accessToken,
-              details.to,
-              details.subject,
-              details.body
-            );
-            return Response.json({ success: true, result, isReply: false, note: "Sent as new email (thread reply failed)" });
-          } catch (e2: unknown) {
-            return Response.json({ error: (e2 as Error).message }, { status: 500 });
-          }
+        } catch (replyErr: unknown) {
+          console.log("Reply send failed:", (replyErr as Error).message, "Retrying without threadId");
+          // Retry without threadId but keep the headers
+          const result = await gmailClient.sendEmail(
+            tokenResult.data.accessToken,
+            details.to,
+            details.subject,
+            details.body,
+            replyTo ? { threadId: "", messageId: replyTo.messageId } : undefined
+          );
+          console.log("Email sent with headers only:", { resultThreadId: result.threadId });
+          return Response.json({ success: true, result, isReply: false });
         }
       }
 

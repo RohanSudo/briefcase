@@ -110,7 +110,7 @@ export async function sendEmail(
   ).toString("base64url");
 
   const payload: { raw: string; threadId?: string } = { raw };
-  if (replyTo?.threadId) {
+  if (replyTo?.threadId && replyTo.threadId.length > 0) {
     payload.threadId = replyTo.threadId;
   }
 
