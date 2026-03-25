@@ -413,6 +413,7 @@ RULES:
     const allMessages = [...openaiMessages];
     let lastAssistantContent = "";
     const MAX_ROUNDS = 5;
+    const activityEntries: Array<{ toolName: string; service: string; status: string; details?: Record<string, unknown> }> = [];
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
       const response = await client.chat.completions.create({
@@ -498,6 +499,17 @@ RULES:
             tool_call_id: toolCall.id,
             content: toolResult,
           });
+          // Log read-only tool calls to activity
+          const toolService = ["checkEmail", "sendEmail"].includes(fnName) ? "gmail"
+            : ["getCalendarEvents", "createCalendarEvent"].includes(fnName) ? "calendar"
+            : "slack";
+          const toolDetails: Record<string, unknown> = {};
+          try {
+            const parsed = JSON.parse(toolResult);
+            if (fnName === "checkEmail") toolDetails.count = parsed?.length || 0;
+            if (fnName === "getCalendarEvents") toolDetails.count = parsed?.allEventsInRange?.length || 0;
+          } catch { /* ignore */ }
+          activityEntries.push({ toolName: fnName, service: toolService, status: "auto", details: toolDetails });
         }
       }
 
@@ -564,7 +576,10 @@ RULES:
           ],
         });
 
-        return result.toUIMessageStreamResponse();
+        const activityHeader = activityEntries.length > 0 ? encodeURIComponent(JSON.stringify(activityEntries)) : "";
+        const resp = result.toUIMessageStreamResponse();
+        if (activityHeader) resp.headers.set("X-Activity", activityHeader);
+        return resp;
       } else {
         streamMessages.push({
           role: "user",
@@ -580,7 +595,10 @@ RULES:
       messages: streamMessages,
     });
 
-    return result.toUIMessageStreamResponse();
+    const activityHeader = activityEntries.length > 0 ? encodeURIComponent(JSON.stringify(activityEntries)) : "";
+    const resp = result.toUIMessageStreamResponse();
+    if (activityHeader) resp.headers.set("X-Activity", activityHeader);
+    return resp;
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Chat API error:", err.message, err.stack);

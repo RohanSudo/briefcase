@@ -33,6 +33,30 @@ export default function ChatPage() {
     onError: (err) => {
       console.error("useChat onError:", err);
     },
+    onResponse: (response) => {
+      const activityHeader = response.headers.get("X-Activity");
+      if (activityHeader) {
+        try {
+          const entries = JSON.parse(decodeURIComponent(activityHeader)) as Array<{
+            toolName: string;
+            service: string;
+            status: string;
+            details?: Record<string, unknown>;
+          }>;
+          setActivityLog((prev) => [
+            ...entries.map((e, i) => ({
+              id: `${Date.now()}-${i}`,
+              toolName: e.toolName,
+              service: e.service as "gmail" | "calendar" | "slack",
+              status: e.status as "auto" | "approved" | "denied" | "error",
+              details: e.details,
+              createdAt: new Date().toISOString(),
+            })),
+            ...prev,
+          ]);
+        } catch { /* ignore parse errors */ }
+      }
+    },
   });
 
   // Sync hitlEnabled to cookie (server) and localStorage (persistence)
