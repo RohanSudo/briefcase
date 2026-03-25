@@ -24,11 +24,12 @@ const serviceIcons = {
   slack: <MessageSquare className="h-3.5 w-3.5" />,
 };
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   auto: { label: "Auto", className: "bg-zinc-400/15 text-zinc-400" },
   approved: { label: "Approved", className: "bg-success/15 text-success" },
   denied: { label: "Denied", className: "bg-destructive/15 text-destructive" },
   error: { label: "Error", className: "bg-destructive/15 text-destructive" },
+  pending: { label: "Pending", className: "bg-warning/15 text-warning" },
 };
 
 const filters = ["all", "gmail", "calendar", "slack"] as const;
@@ -99,7 +100,7 @@ export function ActivityLogTab({ entries }: ActivityLogTabProps) {
           </p>
         )}
         {filtered.map((entry, i) => {
-          const status = statusConfig[entry.status];
+          const status = statusConfig[entry.status] || statusConfig.auto;
           return (
             <motion.div
               key={entry.id}
