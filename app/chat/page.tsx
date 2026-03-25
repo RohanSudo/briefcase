@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Navbar } from "@/components/layout/navbar";
 import { ChatView } from "@/components/chat/chat-view";
@@ -44,7 +44,7 @@ export default function ChatPage() {
   const isLoading = status === "submitted" || status === "streaming";
 
   // Watch for approval blocks and activity blocks in messages
-  const [processedActivityIds, setProcessedActivityIds] = useState<Set<string>>(new Set());
+  const processedActivityIdsRef = React.useRef<Set<string>>(new Set());
   useEffect(() => {
     for (const msg of messages) {
       if (msg.role !== "assistant") continue;
@@ -66,9 +66,9 @@ export default function ChatPage() {
         } catch { /* not valid json */ }
       }
 
-      // Parse activity blocks
+      // Parse activity blocks (use ref to avoid re-render loop)
       const activityMatch = text.match(/\[ACTIVITY\]([\s\S]*?)\[\/ACTIVITY\]/);
-      if (activityMatch && !processedActivityIds.has(msg.id)) {
+      if (activityMatch && !processedActivityIdsRef.current.has(msg.id)) {
         try {
           const entries = JSON.parse(activityMatch[1]) as Array<{
             toolName: string;
@@ -76,7 +76,7 @@ export default function ChatPage() {
             status: string;
             details?: Record<string, unknown>;
           }>;
-          setProcessedActivityIds((prev) => new Set(prev).add(msg.id));
+          processedActivityIdsRef.current.add(msg.id);
           setActivityLog((prev) => [
             ...entries.map((e, i) => ({
               id: `${msg.id}-${i}`,
@@ -91,7 +91,7 @@ export default function ChatPage() {
         } catch { /* not valid json */ }
       }
     }
-  }, [messages, pendingApprovals, processedActivityIds]);
+  }, [messages, pendingApprovals]);
 
   // Fetch user profile from Auth0
   useEffect(() => {
