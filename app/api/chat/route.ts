@@ -452,6 +452,33 @@ RULES:
           hitlAction = fnName;
           hitlArgs = { ...fnArgs };
 
+          // Server-side email address correction
+          // If the AI made up an email (example.com, placeholder), try to find the real one
+          if (fnName === "sendEmail" && hitlArgs.to) {
+            const toAddr = (hitlArgs.to as string).toLowerCase();
+            if (toAddr.includes("example.com") || toAddr.includes("placeholder") || toAddr.includes("unknown")) {
+              try {
+                const emailToken = await exchangeToken("google");
+                if (emailToken.ok) {
+                  const recentEmails = await gmailClient.readEmails(emailToken.data.accessToken, 10);
+                  // Try to match by sender name from the subject or conversation
+                  const subject = (hitlArgs.subject as string || "").replace(/^Re:\s*/i, "").trim();
+                  const matchBySubject = recentEmails.find(e =>
+                    e.subject.toLowerCase().includes(subject.toLowerCase()) ||
+                    subject.toLowerCase().includes(e.subject.toLowerCase())
+                  );
+                  if (matchBySubject) {
+                    // Extract email from "Name <email>" format
+                    const emailMatch = matchBySubject.from.match(/<([^>]+)>/);
+                    const realEmail = emailMatch ? emailMatch[1] : matchBySubject.from;
+                    console.log("Email address corrected:", toAddr, "->", realEmail);
+                    hitlArgs.to = realEmail;
+                  }
+                }
+              } catch { /* email lookup failed */ }
+            }
+          }
+
           // Server-side calendar validation for sendEmail
           if (fnName === "sendEmail" && fnArgs.body) {
             const bodyLower = (fnArgs.body as string).toLowerCase();
