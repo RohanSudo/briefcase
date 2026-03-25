@@ -17,15 +17,15 @@ export async function POST(req: Request) {
         if (!tokenResult.ok)
           return Response.json({ error: tokenResult.error.message }, { status: 400 });
 
-        // Try to find the original email thread to reply in-thread
+        // Always try to find an existing thread to reply in
         let replyTo: { threadId: string; messageId: string } | undefined;
-        const isReply = (details.subject as string || "").toLowerCase().startsWith("re:");
-        if (isReply) {
-          try {
-            const subject = (details.subject as string || "").replace(/^Re:\s*/i, "").trim();
-            // Search Gmail directly for the subject to find the thread
+        try {
+          // Strip "Re:" prefix if present for search
+          const rawSubject = (details.subject as string || "").replace(/^Re:\s*/i, "").trim();
+          if (rawSubject) {
+            // Search Gmail for emails with this subject
             const searchParams = new URLSearchParams({
-              q: `subject:${subject}`,
+              q: `subject:"${rawSubject}"`,
               maxResults: "5",
             });
             const searchRes = await fetch(
@@ -34,7 +34,6 @@ export async function POST(req: Request) {
             );
             const searchData = await searchRes.json();
             if (searchData.messages && searchData.messages.length > 0) {
-              // Get the first matching message's full details
               const msgRes = await fetch(
                 `https://gmail.googleapis.com/gmail/v1/users/me/messages/${searchData.messages[0].id}?format=metadata&metadataHeaders=Message-ID`,
                 { headers: { Authorization: `Bearer ${tokenResult.data.accessToken}` } }
@@ -45,12 +44,16 @@ export async function POST(req: Request) {
               )?.value;
               if (msgData.threadId && messageIdHeader) {
                 replyTo = { threadId: msgData.threadId, messageId: messageIdHeader };
+                // Ensure subject has Re: prefix for proper threading
+                if (!(details.subject as string).toLowerCase().startsWith("re:")) {
+                  details.subject = `Re: ${details.subject}`;
+                }
                 console.log("Found thread for reply:", replyTo);
               }
             }
-          } catch (e) {
-            console.log("Thread lookup failed:", (e as Error).message);
           }
+        } catch (e) {
+          console.log("Thread lookup failed:", (e as Error).message);
         }
 
         try {
