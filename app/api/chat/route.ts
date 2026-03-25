@@ -206,49 +206,55 @@ async function executeTool(
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
 
-        // Always expand to full day to catch overlapping events
+        // Query a wide range (7 days before to 7 days after the requested date)
+        // to catch events in any timezone
         let queryMin = args.timeMin as string | undefined;
         let queryMax = args.timeMax as string | undefined;
-        let fullDayMin = queryMin;
-        let fullDayMax = queryMax;
 
         if (queryMin) {
           const d = new Date(queryMin);
-          fullDayMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString();
-          fullDayMax = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
+          // Go 2 days before and 2 days after to handle timezone issues
+          const wideMin = new Date(d.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+          const wideMax = new Date(d.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+          queryMin = wideMin;
+          queryMax = wideMax;
         }
 
         const events = await calendarClient.getEvents(
           tokenResult.data.accessToken,
-          fullDayMin,
-          fullDayMax,
-          (args.maxResults as number) || 20
+          queryMin,
+          queryMax,
+          (args.maxResults as number) || 50
         );
 
-        // Check specific time availability
-        const checkTime = queryMin ? new Date(queryMin as string).getTime() : 0;
+        console.log("Calendar tool: queried", queryMin, "to", queryMax, "found", events?.length || 0, "events:",
+          events?.map((e: { summary: string; start: string; end: string }) => `${e.summary} ${e.start}-${e.end}`).join(", "));
+
+        // Check specific time availability against ALL events
+        const requestedMin = args.timeMin ? new Date(args.timeMin as string).getTime() : 0;
+        const requestedMax = args.timeMax ? new Date(args.timeMax as string).getTime() : requestedMin + 24 * 60 * 60 * 1000;
         const busyAt: string[] = [];
-        const freeAt: string[] = [];
 
         if (Array.isArray(events) && events.length > 0) {
           for (const evt of events) {
             const evtStart = new Date(evt.start).getTime();
             const evtEnd = new Date(evt.end).getTime();
-            if (checkTime >= evtStart && checkTime < evtEnd) {
-              busyAt.push(`CONFLICT: The user has "${evt.summary}" from ${evt.start} to ${evt.end}. The user is BUSY at the requested time because this event covers it.`);
+            // Check if event overlaps with requested range at all
+            if (evtStart < requestedMax && evtEnd > requestedMin) {
+              busyAt.push(`CONFLICT: "${evt.summary}" from ${evt.start} to ${evt.end} overlaps with the requested time.`);
             }
           }
         }
 
         const verdict = busyAt.length > 0
-          ? `VERDICT: BUSY. The user is NOT free. ${busyAt.join(" ")}`
-          : "VERDICT: FREE. No conflicting events at the requested time.";
+          ? `VERDICT: BUSY. The user has conflicts. ${busyAt.join(" ")}`
+          : "VERDICT: FREE. No conflicting events.";
 
         return JSON.stringify({
-          allEventsOnDay: events,
+          allEventsInRange: events,
           conflicts: busyAt,
           verdict,
-          _instruction: "ALWAYS use the VERDICT to answer. If it says BUSY, the user is NOT free. Do not override the verdict with your own judgment."
+          _instruction: "ALWAYS use the VERDICT to answer. If it says BUSY, the user is NOT free."
         });
       }
 
