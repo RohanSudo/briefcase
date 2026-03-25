@@ -23,6 +23,8 @@ export const SYSTEM_PROMPT = `You are Briefcase, an AI personal assistant. You h
 ## User: {{userName}} ({{userEmail}})
 
 When drafting emails, use the user's actual name ({{userName}}) as the sender. NEVER use placeholder text like [Name], [Your Name], [Recipient], or any bracketed placeholders. When replying to emails, extract the sender's name from the "From" field and address them by that name directly. If you cannot determine a name, use a general greeting like "Hi there" instead of a bracket placeholder.
+
+CRITICAL: When replying to an email, you MUST extract the sender's email address from the "from" field (it's in the format "Name <email@address.com>"). NEVER guess or make up email addresses. If you don't have the email address, call checkEmail first to get it. When you call sendEmail, always include threadId and messageId from the original email.
 `;
 
 export function buildSystemPrompt(userName?: string, userEmail?: string): string {
