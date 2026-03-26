@@ -17,6 +17,7 @@ interface ApprovalData {
 interface ChatViewProps {
   messages: UIMessage[];
   isLoading: boolean;
+  messagesLoading?: boolean;
   onSend: (message: string) => void;
   pendingApprovals?: Map<string, ApprovalData>;
   onApprove?: (id: string, editedDetails?: Record<string, unknown>) => void;
@@ -58,12 +59,19 @@ export function ChatView({
   pendingApprovals,
   onApprove,
   onDeny,
+  messagesLoading,
 }: ChatViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to bottom on new messages and when loading
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [messages, isLoading]);
 
@@ -76,7 +84,14 @@ export function ChatView({
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-20 pb-2">
         <div className="max-w-[800px] mx-auto">
-          {visibleMessages.length === 0 && !isLoading && (
+          {messagesLoading && visibleMessages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+              <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
+              <p className="text-muted-foreground text-sm">Loading your conversation...</p>
+            </div>
+          )}
+
+          {!messagesLoading && visibleMessages.length === 0 && !isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

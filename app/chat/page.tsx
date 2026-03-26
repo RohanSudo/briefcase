@@ -345,6 +345,7 @@ export default function ChatPage() {
         <ChatView
           messages={messages}
           isLoading={isLoading}
+          messagesLoading={!messagesLoadedRef.current}
           onSend={handleSend}
           pendingApprovals={pendingApprovals}
           onApprove={handleApprove}
