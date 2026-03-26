@@ -57,9 +57,9 @@ export async function sendMessage(
   channelId: string,
   text: string
 ): Promise<{ ok: boolean; ts: string }> {
-  // Try to join the channel first (required even if user is a member in UI)
+  // Try to join the channel first
   try {
-    await fetch(`${SLACK_BASE}/conversations.join`, {
+    const joinRes = await fetch(`${SLACK_BASE}/conversations.join`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -67,7 +67,9 @@ export async function sendMessage(
       },
       body: JSON.stringify({ channel: channelId }),
     });
-  } catch { /* join failed, try posting anyway */ }
+    const joinData = await joinRes.json();
+    console.log("Slack join result:", JSON.stringify(joinData));
+  } catch (e) { console.log("Slack join error:", (e as Error).message); }
 
   const res = await fetch(`${SLACK_BASE}/chat.postMessage`, {
     method: "POST",
@@ -78,6 +80,7 @@ export async function sendMessage(
     body: JSON.stringify({ channel: channelId, text }),
   });
   const data = await res.json();
+  console.log("Slack postMessage result:", JSON.stringify(data));
   if (!data.ok) throw new Error(`Slack send failed: ${data.error}`);
   return { ok: true, ts: data.ts };
 }
