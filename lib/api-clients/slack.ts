@@ -57,6 +57,18 @@ export async function sendMessage(
   channelId: string,
   text: string
 ): Promise<{ ok: boolean; ts: string }> {
+  // Try to join the channel first (required even if user is a member in UI)
+  try {
+    await fetch(`${SLACK_BASE}/conversations.join`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channel: channelId }),
+    });
+  } catch { /* join failed, try posting anyway */ }
+
   const res = await fetch(`${SLACK_BASE}/chat.postMessage`, {
     method: "POST",
     headers: {
