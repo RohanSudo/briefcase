@@ -33,17 +33,73 @@ export default function ChatPage() {
     { provider: "slack", status: "disconnected", scopes: [] },
   ]);
 
+  const [conversationId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("conversationId");
+      if (saved) return saved;
+      const id = crypto.randomUUID();
+      localStorage.setItem("conversationId", id);
+      return id;
+    }
+    return "default";
+  });
+
   const { messages, sendMessage, setMessages, status, error } = useChat({
     onError: (err) => {
       console.error("useChat onError:", err);
     },
   });
 
-  // Sync hitlEnabled to cookie (server) and localStorage (persistence)
+  // Load saved messages on mount
+  const messagesLoadedRef = React.useRef(false);
   useEffect(() => {
-    document.cookie = `hitl=${hitlEnabled ? "1" : "0"}; path=/; SameSite=Lax`;
-    localStorage.setItem("hitl", hitlEnabled ? "1" : "0");
-  }, [hitlEnabled]);
+    if (!isAuthenticated || messagesLoadedRef.current) return;
+    messagesLoadedRef.current = true;
+    fetch(`/api/messages?conversationId=${conversationId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows: Array<{ id: number; role: string; content: string; created_at: string }>) => {
+        if (rows.length > 0) {
+          const restored = rows
+            .filter((r) => !r.content.startsWith("[INTERNAL"))
+            .map((r) => ({
+              id: String(r.id),
+              role: r.role as "user" | "assistant",
+              parts: [{ type: "text" as const, text: r.content }],
+              createdAt: new Date(r.created_at),
+            }));
+          if (restored.length > 0) {
+            setMessages(restored);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated, conversationId, setMessages]);
+
+  // Save messages to DB when they change
+  const savedCountRef = React.useRef(0);
+  useEffect(() => {
+    if (!isAuthenticated || messages.length === 0) return;
+    // Only save new messages (beyond what we've already saved)
+    const newMessages = messages.slice(savedCountRef.current);
+    for (const msg of newMessages) {
+      if (msg.role !== "user" && msg.role !== "assistant") continue;
+      const text = msg.parts
+        ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+        .map((p) => p.text)
+        .join("") || "";
+      if (!text || text.startsWith("[INTERNAL")) continue;
+      // Only save completed messages (not streaming)
+      if (msg.role === "assistant" && status === "streaming") continue;
+      fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, role: msg.role, content: text }),
+      }).catch(() => {});
+    }
+    if (status !== "streaming") {
+      savedCountRef.current = messages.length;
+    }
+  }, [messages, status, isAuthenticated, conversationId]);
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -267,7 +323,16 @@ export default function ChatPage() {
       <Navbar
         onTogglePanel={() => setIsPanelOpen((prev) => !prev)}
         isPanelOpen={isPanelOpen}
-        onNewChat={() => setMessages([])}
+        onNewChat={() => {
+          setMessages([]);
+          savedCountRef.current = 0;
+          // Clear DB messages for this conversation
+          fetch(`/api/messages?conversationId=${conversationId}`, { method: "DELETE" }).catch(() => {});
+          // Generate new conversation ID
+          const newId = crypto.randomUUID();
+          localStorage.setItem("conversationId", newId);
+          window.location.reload();
+        }}
         userName={userName}
         userEmail={userEmail}
       />
