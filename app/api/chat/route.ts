@@ -189,12 +189,39 @@ async function executeTool(
         const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
-        const replyTo = (args.threadId && args.messageId)
-          ? { threadId: args.threadId as string, messageId: args.messageId as string }
-          : undefined;
+
+        // Always look up real email address and thread from Gmail
+        let sendTo = args.to as string;
+        let replyTo: { threadId: string; messageId: string } | undefined;
+        if (args.threadId && args.messageId) {
+          replyTo = { threadId: args.threadId as string, messageId: args.messageId as string };
+        }
+        try {
+          const recentEmails = await gmailClient.readEmails(tokenResult.data.accessToken, 20);
+          const subject = ((args.subject as string) || "").replace(/^Re:\s*/i, "").trim();
+          let match = recentEmails.find(e => {
+            const eSub = e.subject.toLowerCase().trim();
+            return eSub === subject.toLowerCase() || eSub.includes(subject.toLowerCase()) || subject.toLowerCase().includes(eSub);
+          });
+          if (!match) {
+            const toName = sendTo.split("@")[0].replace(/[._-]/g, " ").toLowerCase();
+            if (toName.length > 2) {
+              match = recentEmails.find(e => e.from.toLowerCase().includes(toName));
+            }
+          }
+          if (match) {
+            const emailMatch = match.from.match(/<([^>]+)>/);
+            if (emailMatch) sendTo = emailMatch[1];
+            if (match.threadId && match.messageId) {
+              replyTo = { threadId: match.threadId, messageId: match.messageId };
+            }
+            console.log("sendEmail lookup:", args.to, "->", sendTo, "thread:", match.threadId);
+          }
+        } catch { /* lookup failed, use AI's values */ }
+
         const result = await gmailClient.sendEmail(
           tokenResult.data.accessToken,
-          args.to as string,
+          sendTo,
           args.subject as string,
           args.body as string,
           replyTo
