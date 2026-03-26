@@ -17,43 +17,51 @@ export async function POST(req: Request) {
         if (!tokenResult.ok)
           return Response.json({ error: tokenResult.error.message }, { status: 400 });
 
-        // Always try to find an existing thread to reply in
+        // Use pre-looked-up threadId/messageId from the chat route, or search for it
         let replyTo: { threadId: string; messageId: string } | undefined;
-        try {
-          // Strip "Re:" prefix if present for search
-          const rawSubject = (details.subject as string || "").replace(/^Re:\s*/i, "").trim();
-          if (rawSubject) {
-            // Search Gmail for emails with this subject
-            const searchParams = new URLSearchParams({
-              q: `subject:"${rawSubject}"`,
-              maxResults: "5",
-            });
-            const searchRes = await fetch(
-              `https://gmail.googleapis.com/gmail/v1/users/me/messages?${searchParams}`,
-              { headers: { Authorization: `Bearer ${tokenResult.data.accessToken}` } }
-            );
-            const searchData = await searchRes.json();
-            if (searchData.messages && searchData.messages.length > 0) {
-              const msgRes = await fetch(
-                `https://gmail.googleapis.com/gmail/v1/users/me/messages/${searchData.messages[0].id}?format=metadata&metadataHeaders=Message-ID`,
+
+        // Check if chat route already found the thread
+        if (details._threadId && details._messageId) {
+          replyTo = { threadId: details._threadId, messageId: details._messageId };
+          if (!(details.subject as string).toLowerCase().startsWith("re:")) {
+            details.subject = `Re: ${details.subject}`;
+          }
+          console.log("Using pre-looked-up thread:", replyTo);
+        } else {
+          // Fallback: search Gmail for the thread
+          try {
+            const rawSubject = (details.subject as string || "").replace(/^Re:\s*/i, "").trim();
+            if (rawSubject) {
+              const searchParams = new URLSearchParams({
+                q: `subject:"${rawSubject}"`,
+                maxResults: "5",
+              });
+              const searchRes = await fetch(
+                `https://gmail.googleapis.com/gmail/v1/users/me/messages?${searchParams}`,
                 { headers: { Authorization: `Bearer ${tokenResult.data.accessToken}` } }
               );
-              const msgData = await msgRes.json();
-              const messageIdHeader = msgData.payload?.headers?.find(
-                (h: { name: string }) => h.name.toLowerCase() === "message-id"
-              )?.value;
-              if (msgData.threadId && messageIdHeader) {
-                replyTo = { threadId: msgData.threadId, messageId: messageIdHeader };
-                // Ensure subject has Re: prefix for proper threading
-                if (!(details.subject as string).toLowerCase().startsWith("re:")) {
-                  details.subject = `Re: ${details.subject}`;
+              const searchData = await searchRes.json();
+              if (searchData.messages && searchData.messages.length > 0) {
+                const msgRes = await fetch(
+                  `https://gmail.googleapis.com/gmail/v1/users/me/messages/${searchData.messages[0].id}?format=metadata&metadataHeaders=Message-ID`,
+                  { headers: { Authorization: `Bearer ${tokenResult.data.accessToken}` } }
+                );
+                const msgData = await msgRes.json();
+                const messageIdHeader = msgData.payload?.headers?.find(
+                  (h: { name: string }) => h.name.toLowerCase() === "message-id"
+                )?.value;
+                if (msgData.threadId && messageIdHeader) {
+                  replyTo = { threadId: msgData.threadId, messageId: messageIdHeader };
+                  if (!(details.subject as string).toLowerCase().startsWith("re:")) {
+                    details.subject = `Re: ${details.subject}`;
+                  }
+                  console.log("Found thread via search:", replyTo);
                 }
-                console.log("Found thread for reply:", replyTo);
               }
             }
+          } catch (e) {
+            console.log("Thread lookup failed:", (e as Error).message);
           }
-        } catch (e) {
-          console.log("Thread lookup failed:", (e as Error).message);
         }
 
         // Log what we're about to send
@@ -76,17 +84,15 @@ export async function POST(req: Request) {
           console.log("Email sent as reply:", { resultThreadId: result.threadId });
           return Response.json({ success: true, result, isReply: !!replyTo });
         } catch (replyErr: unknown) {
-          console.log("Reply send failed:", (replyErr as Error).message, "Retrying without threadId");
-          // Retry without threadId but keep the headers
+          console.log("Reply failed, sending as new email:", (replyErr as Error).message);
+          // Retry as a completely new email -- no threadId, no reply headers
           const result = await gmailClient.sendEmail(
             tokenResult.data.accessToken,
             details.to,
             details.subject,
-            details.body,
-            replyTo ? { threadId: "", messageId: replyTo.messageId } : undefined
+            details.body
           );
-          console.log("Email sent with headers only:", { resultThreadId: result.threadId });
-          return Response.json({ success: true, result, isReply: false });
+          return Response.json({ success: true, result, isReply: false, fallback: true });
         }
       }
 

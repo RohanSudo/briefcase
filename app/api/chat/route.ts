@@ -452,31 +452,45 @@ RULES:
           hitlAction = fnName;
           hitlArgs = { ...fnArgs };
 
-          // Server-side email address correction
-          // If the AI made up an email (example.com, placeholder), try to find the real one
-          if (fnName === "sendEmail" && hitlArgs.to) {
-            const toAddr = (hitlArgs.to as string).toLowerCase();
-            if (toAddr.includes("example.com") || toAddr.includes("placeholder") || toAddr.includes("unknown")) {
-              try {
-                const emailToken = await exchangeToken("google");
-                if (emailToken.ok) {
-                  const recentEmails = await gmailClient.readEmails(emailToken.data.accessToken, 10);
-                  // Try to match by sender name from the subject or conversation
-                  const subject = (hitlArgs.subject as string || "").replace(/^Re:\s*/i, "").trim();
-                  const matchBySubject = recentEmails.find(e =>
-                    e.subject.toLowerCase().includes(subject.toLowerCase()) ||
-                    subject.toLowerCase().includes(e.subject.toLowerCase())
-                  );
-                  if (matchBySubject) {
-                    // Extract email from "Name <email>" format
-                    const emailMatch = matchBySubject.from.match(/<([^>]+)>/);
-                    const realEmail = emailMatch ? emailMatch[1] : matchBySubject.from;
-                    console.log("Email address corrected:", toAddr, "->", realEmail);
-                    hitlArgs.to = realEmail;
+          // Server-side: ALWAYS look up the real email address from Gmail
+          // The AI frequently makes up addresses -- we fix it every time
+          if (fnName === "sendEmail") {
+            try {
+              const emailToken = await exchangeToken("google");
+              if (emailToken.ok) {
+                const recentEmails = await gmailClient.readEmails(emailToken.data.accessToken, 20);
+                const subject = (hitlArgs.subject as string || "").replace(/^Re:\s*/i, "").trim();
+
+                // Match by subject first
+                let match = recentEmails.find(e => {
+                  const eSub = e.subject.toLowerCase().trim();
+                  const sSub = subject.toLowerCase();
+                  return eSub === sSub || eSub.includes(sSub) || sSub.includes(eSub);
+                });
+
+                // If no subject match, try matching by sender name in the "to" field
+                if (!match) {
+                  const toName = (hitlArgs.to as string || "").split("@")[0].replace(/[._-]/g, " ").toLowerCase();
+                  if (toName.length > 2) {
+                    match = recentEmails.find(e => {
+                      const fromLower = e.from.toLowerCase();
+                      return fromLower.includes(toName) || toName.split(" ").some(w => w.length > 2 && fromLower.includes(w));
+                    });
                   }
                 }
-              } catch { /* email lookup failed */ }
-            }
+
+                if (match) {
+                  const emailMatch = match.from.match(/<([^>]+)>/);
+                  const realEmail = emailMatch ? emailMatch[1] : match.from;
+                  const originalTo = hitlArgs.to as string;
+                  hitlArgs.to = realEmail;
+                  // Also store threadId/messageId for the approve endpoint
+                  hitlArgs._threadId = match.threadId;
+                  hitlArgs._messageId = match.messageId;
+                  console.log("Email lookup:", originalTo, "->", realEmail, "thread:", match.threadId);
+                }
+              }
+            } catch { /* email lookup failed */ }
           }
 
           // Server-side calendar validation for sendEmail
