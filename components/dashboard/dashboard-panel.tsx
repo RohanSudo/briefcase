@@ -12,6 +12,7 @@ interface DashboardPanelProps {
   onClose: () => void;
   connections: Connection[];
   activityLog: ActivityEntry[];
+  onClearActivity?: () => void;
   hitlEnabled: boolean;
   onReconnect: (provider: string) => void;
   onToggleHitl: (enabled: boolean) => void;
@@ -22,6 +23,7 @@ export function DashboardPanel({
   onClose,
   connections,
   activityLog,
+  onClearActivity,
   hitlEnabled,
   onReconnect,
   onToggleHitl,
@@ -92,7 +94,7 @@ export function DashboardPanel({
                 />
               </TabsContent>
               <TabsContent value="activity" className="mt-0">
-                <ActivityLogTab entries={activityLog} />
+                <ActivityLogTab entries={activityLog} onClear={onClearActivity} />
               </TabsContent>
               <TabsContent value="settings" className="mt-0">
                 <SettingsTab

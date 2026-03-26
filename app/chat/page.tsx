@@ -357,6 +357,11 @@ export default function ChatPage() {
         onClose={() => setIsPanelOpen(false)}
         connections={connections}
         activityLog={activityLog}
+        onClearActivity={() => {
+          fetch("/api/activity/clear", { method: "DELETE" })
+            .then(() => setActivityLog([]))
+            .catch(() => {});
+        }}
         hitlEnabled={hitlEnabled}
         onReconnect={handleReconnect}
         onToggleHitl={(enabled) => {

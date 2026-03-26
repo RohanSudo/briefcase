@@ -16,6 +16,7 @@ export interface ActivityEntry {
 
 interface ActivityLogTabProps {
   entries: ActivityEntry[];
+  onClear?: () => void;
 }
 
 const serviceIcons = {
@@ -63,7 +64,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-export function ActivityLogTab({ entries }: ActivityLogTabProps) {
+export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
 
   const filtered =
@@ -71,9 +72,19 @@ export function ActivityLogTab({ entries }: ActivityLogTabProps) {
 
   return (
     <div className="space-y-3">
-      <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        Recent Activity
-      </span>
+      <div className="flex items-center justify-between">
+        <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          Recent Activity
+        </span>
+        {entries.length > 0 && onClear && (
+          <button
+            onClick={onClear}
+            className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
       {/* Filter pills */}
       <div className="flex gap-1.5">
