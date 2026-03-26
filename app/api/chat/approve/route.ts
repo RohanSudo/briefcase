@@ -3,6 +3,7 @@ import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as gmailClient from "@/lib/api-clients/gmail";
 import * as calendarClient from "@/lib/api-clients/calendar";
 import * as slackClient from "@/lib/api-clients/slack";
+import { logActivity } from "@/lib/db/queries";
 
 export async function POST(req: Request) {
   try {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
             replyTo
           );
           console.log("Email sent as reply:", { resultThreadId: result.threadId });
+          try { await logActivity(session.user.sub, "sendEmail", "gmail", "approved", { to: details.to, subject: details.subject }); } catch {}
           return Response.json({ success: true, result, isReply: !!replyTo });
         } catch (replyErr: unknown) {
           console.log("Reply failed, sending as new email:", (replyErr as Error).message);

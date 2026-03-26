@@ -8,6 +8,7 @@ import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as gmailClient from "@/lib/api-clients/gmail";
 import * as calendarClient from "@/lib/api-clients/calendar";
 import * as slackClient from "@/lib/api-clients/slack";
+import { logActivity } from "@/lib/db/queries";
 
 function getOpenAIClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -344,10 +345,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { messages } = body;
 
-    // Read HITL setting from cookie
-    const cookieHeader = req.headers.get("cookie") || "";
-    const hitlMatch = cookieHeader.match(/hitl=(\d)/);
-    const hitlEnabled = hitlMatch ? hitlMatch[1] === "1" : true;
+    // Read HITL setting from database
+    let hitlEnabled = true;
+    try {
+      const { getHitlSetting } = await import("@/lib/db/queries");
+      hitlEnabled = await getHitlSetting(session.user.sub);
+    } catch { /* default to enabled */ }
 
     if (!messages || !Array.isArray(messages)) {
       return new Response("Messages array required", { status: 400 });
@@ -551,6 +554,10 @@ RULES:
             if (fnName === "getCalendarEvents") toolDetails.count = parsed?.allEventsInRange?.length || 0;
           } catch { /* ignore */ }
           activityEntries.push({ toolName: fnName, service: toolService, status: "auto", details: toolDetails });
+          // Log to database
+          try {
+            await logActivity(session.user.sub, fnName, toolService, "auto", toolDetails);
+          } catch { /* db log failed, non-critical */ }
         }
       }
 

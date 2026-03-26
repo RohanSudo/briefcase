@@ -12,12 +12,16 @@ export default function ChatPage() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [hitlEnabled, setHitlEnabled] = useState(true);
 
-  // Load saved HITL preference after mount (avoids SSR hydration mismatch)
+  // Load saved HITL preference from DB
   useEffect(() => {
-    const saved = localStorage.getItem("hitl");
-    if (saved !== null) {
-      setHitlEnabled(saved === "1");
-    }
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.hitlEnabled !== undefined) {
+          setHitlEnabled(data.hitlEnabled);
+        }
+      })
+      .catch(() => {});
   }, []);
   const [pendingApprovals, setPendingApprovals] = useState<Map<string, { action: string; details: Record<string, unknown>; message: string; status: "pending" | "approved" | "denied" }>>(new Map());
   const [activityLog, setActivityLog] = useState<ActivityEntry[]>([]);
@@ -134,6 +138,33 @@ export default function ChatPage() {
       .catch(() => {});
   }, [isAuthenticated]);
 
+  // Fetch activity log
+  const fetchActivity = () => {
+    if (!isAuthenticated) return;
+    fetch("/api/activity")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setActivityLog(data.map((d: Record<string, unknown>) => ({
+            id: String(d.id),
+            toolName: d.tool_name as string,
+            service: d.service as "gmail" | "calendar" | "slack",
+            status: d.status as "auto" | "approved" | "denied" | "error",
+            details: (typeof d.details === "string" ? JSON.parse(d.details) : d.details) as Record<string, unknown>,
+            createdAt: d.created_at as string,
+          })));
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchActivity();
+    // Refresh activity every 10 seconds
+    const interval = setInterval(fetchActivity, 10000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   if (isAuthenticated === null) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -191,6 +222,8 @@ export default function ChatPage() {
         },
         ...prev,
       ]);
+      // Refresh activity from DB
+      fetchActivity();
       // Add a confirmation message without re-triggering the AI tool loop
       if (result.error) {
         sendMessage({ text: `[INTERNAL: Error executing the action: ${result.error}. Tell the user something went wrong. Do NOT call any tools.]` });
@@ -261,7 +294,14 @@ export default function ChatPage() {
         activityLog={activityLog}
         hitlEnabled={hitlEnabled}
         onReconnect={handleReconnect}
-        onToggleHitl={setHitlEnabled}
+        onToggleHitl={(enabled) => {
+          setHitlEnabled(enabled);
+          fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ hitlEnabled: enabled }),
+          }).catch(() => {});
+        }}
       />
     </div>
   );
