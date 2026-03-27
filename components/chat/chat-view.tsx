@@ -62,18 +62,21 @@ export function ChatView({
   messagesLoading,
 }: ChatViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages and when loading
+  // Auto-scroll to bottom on new messages, loading state changes, and initial load
   useEffect(() => {
-    if (scrollRef.current) {
-      // Use requestAnimationFrame to ensure DOM has updated
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      });
-    }
-  }, [messages, isLoading]);
+    const scrollToBottom = () => {
+      if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "instant" });
+      }
+    };
+    // Scroll immediately and after a short delay (for DOM updates)
+    scrollToBottom();
+    const t1 = setTimeout(scrollToBottom, 50);
+    const t2 = setTimeout(scrollToBottom, 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [messages, messages.length, isLoading, messagesLoading]);
 
   const visibleMessages = messages.filter(
     (msg) => msg.role === "user" || msg.role === "assistant"
@@ -183,6 +186,7 @@ export function ChatView({
           {isLoading && visibleMessages[visibleMessages.length - 1]?.role === "user" && (
             <TypingIndicator />
           )}
+          <div ref={bottomRef} />
         </div>
       </div>
 
