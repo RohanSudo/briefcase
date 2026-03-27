@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Navbar } from "@/components/layout/navbar";
 import { ChatView } from "@/components/chat/chat-view";
@@ -193,8 +193,8 @@ export default function ChatPage() {
       .catch(() => {});
   }, [isAuthenticated]);
 
-  // Fetch activity log
-  const fetchActivity = () => {
+  // Fetch activity log from DB
+  const fetchActivity = useCallback(() => {
     if (!isAuthenticated) return;
     fetch("/api/activity")
       .then((res) => (res.ok ? res.json() : []))
@@ -203,7 +203,7 @@ export default function ChatPage() {
           setActivityLog(data.map((d: Record<string, unknown>) => ({
             id: String(d.id),
             toolName: d.tool_name as string,
-            service: d.service as "gmail" | "calendar",
+            service: d.service as "gmail" | "calendar" | "drive" | "contacts" | "other",
             status: d.status as "auto" | "approved" | "denied" | "error",
             details: (typeof d.details === "string" ? JSON.parse(d.details) : d.details) as Record<string, unknown>,
             createdAt: d.created_at as string,
@@ -211,14 +211,25 @@ export default function ChatPage() {
         }
       })
       .catch(() => {});
-  };
+  }, [isAuthenticated]);
 
+  // Poll activity log every 10 seconds
   useEffect(() => {
     fetchActivity();
-    // Refresh activity every 10 seconds
     const interval = setInterval(fetchActivity, 10000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [fetchActivity]);
+
+  // Also refresh activity when streaming finishes (a tool call just completed)
+  const prevStatusRef = React.useRef(status);
+  useEffect(() => {
+    if (prevStatusRef.current === "streaming" && status === "ready") {
+      // Short delay so the server has time to commit the activity row
+      const t = setTimeout(fetchActivity, 1000);
+      return () => clearTimeout(t);
+    }
+    prevStatusRef.current = status;
+  }, [status, fetchActivity]);
 
   if (isAuthenticated === null) {
     return (

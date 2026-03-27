@@ -64,18 +64,34 @@ export function ChatView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const hasScrolledInitially = useRef(false);
+
   // Auto-scroll to bottom on new messages, loading state changes, and initial load
   useEffect(() => {
+    const isInitial = !hasScrolledInitially.current;
+    const behavior = isInitial ? "instant" as const : "smooth" as const;
+
     const scrollToBottom = () => {
+      // Belt-and-suspenders: set scrollTop AND scrollIntoView
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
       if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "instant" });
+        bottomRef.current.scrollIntoView({ behavior });
       }
     };
-    // Scroll immediately and after a short delay (for DOM updates)
+
+    // Scroll immediately and after short delays for DOM/layout updates
     scrollToBottom();
     const t1 = setTimeout(scrollToBottom, 50);
-    const t2 = setTimeout(scrollToBottom, 200);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t2 = setTimeout(scrollToBottom, 150);
+    const t3 = setTimeout(scrollToBottom, 400);
+
+    if (messages.length > 0 || isLoading) {
+      hasScrolledInitially.current = true;
+    }
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [messages, messages.length, isLoading, messagesLoading]);
 
   const visibleMessages = messages.filter(
