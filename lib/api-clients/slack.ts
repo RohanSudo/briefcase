@@ -55,7 +55,8 @@ export async function readMessages(
 export async function sendMessage(
   accessToken: string,
   channelId: string,
-  text: string
+  text: string,
+  userName?: string
 ): Promise<{ ok: boolean; ts: string }> {
   // Try to join the channel first
   try {
@@ -77,7 +78,11 @@ export async function sendMessage(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ channel: channelId, text }),
+    body: JSON.stringify({
+      channel: channelId,
+      text,
+      ...(userName ? { username: userName, icon_emoji: ":briefcase:" } : {}),
+    }),
   });
   const data = await res.json();
   console.log("Slack postMessage result:", JSON.stringify(data));

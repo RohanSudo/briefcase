@@ -169,7 +169,8 @@ const tools: ChatCompletionTool[] = [
 
 async function executeTool(
   name: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  userName?: string
 ): Promise<string> {
   try {
     switch (name) {
@@ -330,7 +331,8 @@ async function executeTool(
         const result = await slackClient.sendMessage(
           tokenResult.data.accessToken,
           args.channelId as string,
-          args.text as string
+          args.text as string,
+          userName
         );
         return JSON.stringify(result);
       }
@@ -564,7 +566,7 @@ RULES:
             }),
           });
         } else {
-          const toolResult = await executeTool(fnName, fnArgs);
+          const toolResult = await executeTool(fnName, fnArgs, session.user.name || session.user.nickname);
           allMessages.push({
             role: "tool",
             tool_call_id: toolCall.id,
