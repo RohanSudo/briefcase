@@ -30,7 +30,6 @@ export default function ChatPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [connections, setConnections] = useState<Connection[]>([
     { provider: "google", status: "disconnected", scopes: [] },
-    { provider: "slack", status: "disconnected", scopes: [] },
   ]);
 
   const [conversationId] = useState(() => {
@@ -141,7 +140,7 @@ export default function ChatPage() {
             ...entries.map((e, i) => ({
               id: `${msg.id}-${i}`,
               toolName: e.toolName,
-              service: e.service as "gmail" | "calendar" | "slack",
+              service: e.service as "gmail" | "calendar",
               status: e.status as "auto" | "approved" | "denied" | "error",
               details: e.details,
               createdAt: new Date().toISOString(),
@@ -204,7 +203,7 @@ export default function ChatPage() {
           setActivityLog(data.map((d: Record<string, unknown>) => ({
             id: String(d.id),
             toolName: d.tool_name as string,
-            service: d.service as "gmail" | "calendar" | "slack",
+            service: d.service as "gmail" | "calendar",
             status: d.status as "auto" | "approved" | "denied" | "error",
             details: (typeof d.details === "string" ? JSON.parse(d.details) : d.details) as Record<string, unknown>,
             createdAt: d.created_at as string,
@@ -270,8 +269,8 @@ export default function ChatPage() {
       setActivityLog((prev) => [
         {
           id: Date.now().toString(),
-          toolName: approval.action === "sendEmail" ? "Sent email" : approval.action === "createCalendarEvent" ? "Created event" : "Sent Slack message",
-          service: (approval.action.includes("Email") ? "gmail" : approval.action.includes("Calendar") ? "calendar" : "slack") as "gmail" | "calendar" | "slack",
+          toolName: approval.action === "sendEmail" ? "Sent email" : "Created event",
+          service: (approval.action.includes("Email") ? "gmail" : "calendar") as "gmail" | "calendar",
           createdAt: new Date().toISOString(),
           status: result.error ? "error" as const : "approved" as const,
           details: { message: approval.message },
@@ -302,8 +301,8 @@ export default function ChatPage() {
     setActivityLog((prev) => [
       {
         id: Date.now().toString(),
-        toolName: approval.action === "sendEmail" ? "Email blocked" : approval.action === "createCalendarEvent" ? "Event blocked" : "Slack message blocked",
-        service: (approval.action.includes("Email") ? "gmail" : approval.action.includes("Calendar") ? "calendar" : "slack") as "gmail" | "calendar" | "slack",
+        toolName: approval.action === "sendEmail" ? "Email blocked" : "Event blocked",
+        service: (approval.action.includes("Email") ? "gmail" : "calendar") as "gmail" | "calendar",
         createdAt: new Date().toISOString(),
         status: "denied" as const,
         details: { message: approval.message },
@@ -314,7 +313,7 @@ export default function ChatPage() {
   };
 
   const handleReconnect = (provider: string) => {
-    const connectionName = provider === "google" ? "google-oauth2" : "sign-in-with-slack";
+    const connectionName = "google-oauth2";
     window.location.href = `/auth/connect?connection=${connectionName}&returnTo=/chat`;
   };
 

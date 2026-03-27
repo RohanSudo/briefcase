@@ -23,7 +23,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "briefcase - your AI assistant, your rules",
   description:
-    "AI assistant that connects to your email, calendar, and Slack with full transparency and your approval.",
+    "AI assistant that connects to your email, calendar, and files with full transparency and your approval.",
 };
 
 export default function RootLayout({

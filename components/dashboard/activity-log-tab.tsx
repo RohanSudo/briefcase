@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Calendar, MessageSquare } from "lucide-react";
+import { Mail, Calendar, HardDrive, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export interface ActivityEntry {
   id: string;
   toolName: string;
-  service: "gmail" | "calendar" | "slack";
+  service: "gmail" | "calendar" | "drive" | "contacts" | "other";
   status: "auto" | "approved" | "denied" | "error";
   details?: Record<string, unknown>;
   createdAt: string;
@@ -19,10 +19,12 @@ interface ActivityLogTabProps {
   onClear?: () => void;
 }
 
-const serviceIcons = {
+const serviceIcons: Record<string, React.ReactNode> = {
   gmail: <Mail className="h-3.5 w-3.5" />,
   calendar: <Calendar className="h-3.5 w-3.5" />,
-  slack: <MessageSquare className="h-3.5 w-3.5" />,
+  drive: <HardDrive className="h-3.5 w-3.5" />,
+  contacts: <Users className="h-3.5 w-3.5" />,
+  other: <Mail className="h-3.5 w-3.5" />,
 };
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -33,7 +35,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   pending: { label: "Pending", className: "bg-warning/15 text-warning" },
 };
 
-const filters = ["all", "gmail", "calendar", "slack"] as const;
+const filters = ["all", "gmail", "calendar", "drive", "contacts"] as const;
 
 function describeAction(toolName: string, details?: Record<string, unknown>): string {
   switch (toolName) {
@@ -45,10 +47,12 @@ function describeAction(toolName: string, details?: Record<string, unknown>): st
       return `Read ${details?.count || ""} calendar events`.trim();
     case "createCalendarEvent":
       return `Create event: ${details?.summary || "..."}`;
-    case "readSlackMessages":
-      return `Read ${details?.channel ? `#${details.channel}` : "Slack"} messages`;
-    case "sendSlackMessage":
-      return `Post to ${details?.channel ? `#${details.channel}` : "Slack"}`;
+    case "searchDrive":
+      return `Search Drive for "${details?.query || "..."}"`;
+    case "listRecentFiles":
+      return "List recent Drive files";
+    case "searchContacts":
+      return `Search contacts for "${details?.query || "..."}"`;
     default:
       return toolName;
   }

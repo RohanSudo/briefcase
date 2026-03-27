@@ -18,12 +18,12 @@ export interface TokenExchangeError {
  * exchange under the hood, including automatic refresh.
  */
 export async function exchangeToken(
-  provider: "google" | "slack"
+  provider: "google"
 ): Promise<
   | { ok: true; data: TokenExchangeResult }
   | { ok: false; error: TokenExchangeError }
 > {
-  const connectionName = provider === "google" ? "google-oauth2" : "sign-in-with-slack";
+  const connectionName = "google-oauth2";
 
   try {
     const result = await auth0.getAccessTokenForConnection({

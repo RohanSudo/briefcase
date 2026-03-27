@@ -110,7 +110,7 @@ export function ChatView({
                 })()}
               </h2>
               <p className="text-muted-foreground text-sm max-w-md">
-                your email, calendar, and Slack -- all in one place. what do you need?
+                your email, calendar, and files -- all in one place. what do you need?
               </p>
             </motion.div>
           )}

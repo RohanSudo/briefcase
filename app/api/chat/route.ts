@@ -7,7 +7,8 @@ import { buildSystemPrompt } from "@/lib/agent/system-prompt";
 import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as gmailClient from "@/lib/api-clients/gmail";
 import * as calendarClient from "@/lib/api-clients/calendar";
-import * as slackClient from "@/lib/api-clients/slack";
+import * as driveClient from "@/lib/api-clients/drive";
+import * as contactsClient from "@/lib/api-clients/contacts";
 import { logActivity } from "@/lib/db/queries";
 
 function getOpenAIClient() {
@@ -116,50 +117,58 @@ const tools: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "listSlackChannels",
+      name: "searchDrive",
       description:
-        "List the public Slack channels visible to the user. Returns channel IDs and names.",
-      parameters: { type: "object", properties: {}, required: [] },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "readSlackMessages",
-      description:
-        "Read recent messages from a specific Slack channel.",
+        "Search the user's Google Drive for files by name or content. Returns file names, types, links, and modification dates.",
       parameters: {
         type: "object",
         properties: {
-          channelId: {
+          query: {
             type: "string",
-            description: "The Slack channel ID to read from",
+            description: "Search query -- file name or content to search for",
           },
-          limit: {
+          maxResults: {
             type: "number",
-            description: "Number of messages to fetch (default 20)",
+            description: "How many files to return (default 10)",
           },
         },
-        required: ["channelId"],
+        required: ["query"],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "sendSlackMessage",
+      name: "listRecentFiles",
       description:
-        "Post a message to a Slack channel on behalf of the user.",
+        "List the user's most recently modified Google Drive files.",
       parameters: {
         type: "object",
         properties: {
-          channelId: {
-            type: "string",
-            description: "The Slack channel ID to post in",
+          maxResults: {
+            type: "number",
+            description: "How many files to return (default 10)",
           },
-          text: { type: "string", description: "The message text" },
         },
-        required: ["channelId", "text"],
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "searchContacts",
+      description:
+        "Search the user's Google Contacts by name. Returns names, email addresses, phone numbers, and organizations. Use this to find someone's email before sending them a message.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "Name or keyword to search for in contacts",
+          },
+        },
+        required: ["query"],
       },
     },
   },
@@ -302,39 +311,38 @@ async function executeTool(
         return JSON.stringify(event);
       }
 
-      case "listSlackChannels": {
-        const tokenResult = await exchangeToken("slack");
+      case "searchDrive": {
+        const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
-        const channels = await slackClient.listChannels(
-          tokenResult.data.accessToken
+        const files = await driveClient.searchFiles(
+          tokenResult.data.accessToken,
+          args.query as string,
+          (args.maxResults as number) || 10
         );
-        return JSON.stringify(channels);
+        return JSON.stringify(files);
       }
 
-      case "readSlackMessages": {
-        const tokenResult = await exchangeToken("slack");
+      case "listRecentFiles": {
+        const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
-        const messages = await slackClient.readMessages(
+        const files = await driveClient.listRecentFiles(
           tokenResult.data.accessToken,
-          args.channelId as string,
-          (args.limit as number) || 20
+          (args.maxResults as number) || 10
         );
-        return JSON.stringify(messages);
+        return JSON.stringify(files);
       }
 
-      case "sendSlackMessage": {
-        const tokenResult = await exchangeToken("slack");
+      case "searchContacts": {
+        const tokenResult = await exchangeToken("google");
         if (!tokenResult.ok)
           return JSON.stringify({ error: tokenResult.error.message });
-        const result = await slackClient.sendMessage(
+        const contacts = await contactsClient.searchContacts(
           tokenResult.data.accessToken,
-          args.channelId as string,
-          args.text as string,
-          userName
+          args.query as string
         );
-        return JSON.stringify(result);
+        return JSON.stringify(contacts);
       }
 
       default:
@@ -438,7 +446,7 @@ RULES:
 
     // Step 1: Multi-round tool call loop (up to 5 rounds)
     const client = getOpenAIClient();
-    const WRITE_ACTIONS = ["sendEmail", "createCalendarEvent", "sendSlackMessage"];
+    const WRITE_ACTIONS = ["sendEmail", "createCalendarEvent"];
     let hitlBlocked = false;
     let hitlAction = "";
     let hitlArgs: Record<string, unknown> = {};
@@ -575,7 +583,9 @@ RULES:
           // Log read-only tool calls to activity
           const toolService = ["checkEmail", "sendEmail"].includes(fnName) ? "gmail"
             : ["getCalendarEvents", "createCalendarEvent"].includes(fnName) ? "calendar"
-            : "slack";
+            : ["searchDrive", "listRecentFiles"].includes(fnName) ? "drive"
+            : ["searchContacts"].includes(fnName) ? "contacts"
+            : "other";
           const toolDetails: Record<string, unknown> = {};
           try {
             const parsed = JSON.parse(toolResult);
@@ -636,7 +646,7 @@ RULES:
       console.log("HITL status:", { hitlBlocked, hitlAction, extraMessagesCount: extraMessages.length });
       if (hitlBlocked) {
         // Add HITL action to activity
-        const hitlService = hitlAction.includes("Email") ? "gmail" : hitlAction.includes("Calendar") ? "calendar" : "slack";
+        const hitlService = hitlAction.includes("Email") ? "gmail" : "calendar";
         activityEntries.push({ toolName: hitlAction, service: hitlService, status: "pending", details: hitlArgs as Record<string, unknown> });
         const hitlActivityBlock = `[ACTIVITY]${JSON.stringify(activityEntries)}[/ACTIVITY]`;
 
@@ -646,9 +656,7 @@ RULES:
           details: hitlArgs,
           message: hitlAction === "sendEmail"
             ? `Send email to ${hitlArgs.to}\nSubject: ${hitlArgs.subject}\n\n${hitlArgs.body}`
-            : hitlAction === "createCalendarEvent"
-            ? `Create event: ${hitlArgs.summary}\nWhen: ${hitlArgs.start} to ${hitlArgs.end}`
-            : `Post to Slack channel ${hitlArgs.channelId}: ${hitlArgs.text}`,
+            : `Create event: ${hitlArgs.summary}\nWhen: ${hitlArgs.start} to ${hitlArgs.end}`,
         });
 
         // Build the approval text with activity data

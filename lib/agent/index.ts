@@ -3,7 +3,6 @@ import { google } from "@ai-sdk/google";
 import { buildSystemPrompt } from "./system-prompt";
 import { createGmailTools } from "./tools/gmail";
 import { createCalendarTools } from "./tools/calendar";
-import { createSlackTools } from "./tools/slack";
 
 export interface AgentConfig {
   userId: string;
@@ -20,12 +19,9 @@ export function createBriefcaseAgent(config: AgentConfig) {
     conversationId,
     hitlEnabled
   );
-  const slackTools = createSlackTools(userId, conversationId, hitlEnabled);
-
   const allTools = {
     ...gmailTools,
     ...calendarTools,
-    ...slackTools,
   };
 
   return {

@@ -36,7 +36,7 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
             </p>
             <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
               When enabled, the agent will ask for your permission before sending
-              emails, creating events, or posting to Slack.
+              emails or creating events.
             </p>
           </div>
           <button
@@ -85,9 +85,9 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
               </div>
 
               <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                The agent will be able to send emails, create calendar events, and
-                post to Slack without asking first. All actions will still be
-                logged in the Activity tab. You can turn this back on anytime.
+                The agent will be able to send emails and create calendar events
+                without asking first. All actions will still be logged in the
+                Activity tab. You can turn this back on anytime.
               </p>
 
               <div className="flex gap-3 justify-end">

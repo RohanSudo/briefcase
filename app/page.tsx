@@ -10,7 +10,7 @@ const features = [
     icon: <Eye className="h-5 w-5" />,
     title: "Smart Briefings",
     description:
-      "Get a unified summary of your email, calendar, and Slack every morning. Ask follow-up questions naturally.",
+      "Get a unified summary of your email, calendar, and files every morning. Ask follow-up questions naturally.",
   },
   {
     icon: <Shield className="h-5 w-5" />,
@@ -52,7 +52,7 @@ export default function LandingPage() {
           <span className="text-primary">your rules</span>
         </h1>
         <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-lg mx-auto mb-8 font-normal">
-          briefcase connects to your email, calendar, and Slack. It reads,
+          briefcase connects to your email, calendar, and files. It reads,
           summarizes, and takes action -- with full transparency and your
           approval.
         </p>

@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mail, Calendar, MessageSquare, RefreshCw } from "lucide-react";
+import { Mail, Calendar, RefreshCw, HardDrive, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export interface Connection {
-  provider: "google" | "slack";
+  provider: "google";
   status: "connected" | "disconnected" | "expiring";
   scopes: string[];
   expiresIn?: string;
@@ -20,24 +20,15 @@ interface ConnectionsTabProps {
 const providerConfig = {
   google: {
     label: "Google",
-    subtitle: "Gmail & Calendar",
+    subtitle: "Gmail, Calendar, Drive & Contacts",
     icon: <Mail className="h-4 w-4" />,
     scopeLabels: {
       "gmail.readonly": "Read emails",
       "gmail.send": "Send emails",
       "calendar.events.readonly": "Read calendar",
       "calendar.events": "Create events",
-    } as Record<string, string>,
-  },
-  slack: {
-    label: "Slack",
-    subtitle: "Workspace",
-    icon: <MessageSquare className="h-4 w-4" />,
-    scopeLabels: {
-      "channels:history": "Read messages",
-      "channels:read": "List channels",
-      "chat:write": "Post messages",
-      "users:read": "View users",
+      "drive.readonly": "Search files",
+      "contacts.readonly": "Read contacts",
     } as Record<string, string>,
   },
 };

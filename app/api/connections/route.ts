@@ -7,13 +7,12 @@ export async function GET() {
 
   const statuses = await Promise.all([
     checkProvider("google"),
-    checkProvider("slack"),
   ]);
 
   return Response.json({ connections: statuses });
 }
 
-async function checkProvider(provider: "google" | "slack") {
+async function checkProvider(provider: "google") {
   const result = await exchangeToken(provider);
   const status = result.ok ? "connected" : "disconnected";
 
@@ -30,8 +29,7 @@ export async function POST(req: Request) {
 
   const { provider } = await req.json();
 
-  const connectionName =
-    provider === "google" ? "google-oauth2" : "slack";
+  const connectionName = "google-oauth2";
   const reconnectUrl = `/auth/connect?connection=${connectionName}`;
 
   return Response.json({ reconnectUrl });

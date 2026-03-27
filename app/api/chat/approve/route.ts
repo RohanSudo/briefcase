@@ -2,7 +2,6 @@ import { auth0 } from "@/lib/auth0";
 import { exchangeToken } from "@/lib/auth/token-exchange";
 import * as gmailClient from "@/lib/api-clients/gmail";
 import * as calendarClient from "@/lib/api-clients/calendar";
-import * as slackClient from "@/lib/api-clients/slack";
 import { logActivity } from "@/lib/db/queries";
 
 export async function POST(req: Request) {
@@ -111,18 +110,6 @@ export async function POST(req: Request) {
           details.attendees
         );
         return Response.json({ success: true, event });
-      }
-
-      case "sendSlackMessage": {
-        const tokenResult = await exchangeToken("slack");
-        if (!tokenResult.ok)
-          return Response.json({ error: tokenResult.error.message }, { status: 400 });
-        const result = await slackClient.sendMessage(
-          tokenResult.data.accessToken,
-          details.channelId,
-          details.text
-        );
-        return Response.json({ success: true, result });
       }
 
       default:

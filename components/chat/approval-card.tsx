@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, X, Mail, Calendar, MessageSquare, Pencil } from "lucide-react";
+import { Check, X, Mail, Calendar, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,7 +22,6 @@ interface ApprovalCardProps {
 function getActionIcon(action: string) {
   if (action.includes("Email")) return <Mail className="h-3.5 w-3.5" />;
   if (action.includes("Calendar")) return <Calendar className="h-3.5 w-3.5" />;
-  if (action.includes("Slack")) return <MessageSquare className="h-3.5 w-3.5" />;
   return <Mail className="h-3.5 w-3.5" />;
 }
 
@@ -131,12 +130,6 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
                 <EditableDetailRow label="Title" value={(editedDetails.summary as string) || ""} editing={editing} onChange={(v) => updateField("summary", v)} />
                 <EditableDetailRow label="Start" value={(editedDetails.start as string) || ""} editing={editing} onChange={(v) => updateField("start", v)} />
                 <EditableDetailRow label="End" value={(editedDetails.end as string) || ""} editing={editing} onChange={(v) => updateField("end", v)} />
-              </div>
-            )}
-            {action.action === "sendSlackMessage" && (
-              <div className="space-y-2 text-sm">
-                <EditableDetailRow label="Channel" value={(editedDetails.channelId as string) || ""} editing={editing} onChange={(v) => updateField("channelId", v)} />
-                <EditableDetailRow label="Message" value={(editedDetails.text as string) || ""} multiline editing={editing} onChange={(v) => updateField("text", v)} />
               </div>
             )}
           </div>
