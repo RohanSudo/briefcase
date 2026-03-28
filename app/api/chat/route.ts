@@ -587,6 +587,11 @@ RULES:
             : ["searchContacts"].includes(fnName) ? "contacts"
             : "other";
           const toolDetails: Record<string, unknown> = {};
+          // Store the query args for display in activity log
+          if (fnName === "searchDrive") toolDetails.query = fnArgs.query;
+          if (fnName === "searchContacts") toolDetails.query = fnArgs.query;
+          if (fnName === "sendEmail") toolDetails.to = fnArgs.to;
+          if (fnName === "createCalendarEvent") toolDetails.summary = fnArgs.summary;
           try {
             const parsed = JSON.parse(toolResult);
             if (fnName === "checkEmail") toolDetails.count = parsed?.length || 0;

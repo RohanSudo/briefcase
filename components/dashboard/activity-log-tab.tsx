@@ -48,11 +48,11 @@ function describeAction(toolName: string, details?: Record<string, unknown>): st
     case "createCalendarEvent":
       return `Create event: ${details?.summary || "..."}`;
     case "searchDrive":
-      return `Search Drive for "${details?.query || "..."}"`;
+      return details?.query ? `Search Drive for "${details.query}"` : "Search Drive";
     case "listRecentFiles":
       return "List recent Drive files";
     case "searchContacts":
-      return `Search contacts for "${details?.query || "..."}"`;
+      return details?.query ? `Search contacts for "${details.query}"` : "Search contacts";
     default:
       return toolName;
   }
@@ -128,7 +128,7 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
                   {serviceIcons[entry.service]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">
+                  <p className="text-sm text-foreground wrap-break-word">
                     {describeAction(entry.toolName, entry.details)}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
