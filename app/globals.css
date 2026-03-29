@@ -132,9 +132,13 @@ button, a, input, textarea, select, [role="button"], [role="tab"], [role="checkb
 }
 
 /* Focus ring styles */
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible {
-  outline: 2px solid rgba(6, 182, 212, 0.5);
+button:focus-visible, a:focus-visible, select:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid rgba(6, 182, 212, 0.3);
   outline-offset: 2px;
+}
+
+input:focus-visible, textarea:focus-visible {
+  outline: none;
 }
 
 /* Scrollbar styling */

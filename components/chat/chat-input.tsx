@@ -60,7 +60,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
             disabled={isLoading}
             rows={1}
             style={{ minHeight: "20px", height: "20px" }}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-[1.4] py-0 my-0 block"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-[1.4] py-0 my-0 block focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
           />
           <AnimatePresence>
             {value.trim() && (
