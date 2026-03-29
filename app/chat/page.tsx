@@ -174,7 +174,7 @@ export default function ChatPage() {
       });
   }, []);
 
-  // Check connection status
+  // Check connection status -- auto-connect Google if not connected
   useEffect(() => {
     if (!isAuthenticated) return;
     fetch("/api/connections")
@@ -188,6 +188,16 @@ export default function ChatPage() {
               scopes: c.scopes || [],
             }))
           );
+          // Auto-connect Google if not connected yet
+          const google = data.connections.find((c: any) => c.provider === "google");
+          if (!google || google.status !== "connected") {
+            // Check if we already tried (prevent redirect loop)
+            const tried = sessionStorage.getItem("autoConnectTried");
+            if (!tried) {
+              sessionStorage.setItem("autoConnectTried", "true");
+              window.location.href = "/auth/connect?connection=google-oauth2&returnTo=/chat";
+            }
+          }
         }
       })
       .catch(() => {});
