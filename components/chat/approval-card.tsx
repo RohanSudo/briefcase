@@ -41,19 +41,19 @@ function EditableDetailRow({
   if (editing) {
     return (
       <div>
-        <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.15em] text-muted-foreground shrink-0">
-          {label}:
+        <span className="font-[var(--font-mono)] text-[9px] uppercase tracking-[0.18em] text-cyan-400/70">
+          {label}
         </span>
         {multiline ? (
           <textarea
-            className="w-full mt-1 bg-background border border-border rounded-md p-2 text-sm text-gray-300 resize-none min-h-[80px]"
+            className="w-full mt-1.5 bg-background/50 border border-border rounded-lg p-2.5 text-sm text-gray-300 resize-none min-h-20 focus:border-cyan-500/50"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={4}
           />
         ) : (
           <input
-            className="w-full mt-1 bg-background border border-border rounded-md px-2 py-1 text-sm text-gray-300"
+            className="w-full mt-1.5 bg-background/50 border border-border rounded-lg px-2.5 py-1.5 text-sm text-gray-300 focus:border-cyan-500/50"
             value={value}
             onChange={(e) => onChange(e.target.value)}
           />
@@ -63,11 +63,11 @@ function EditableDetailRow({
   }
 
   return (
-    <div className={multiline ? "" : "flex gap-2"}>
-      <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.15em] text-muted-foreground shrink-0">
-        {label}:
+    <div className={multiline ? "" : "flex gap-2 items-baseline"}>
+      <span className="font-[var(--font-mono)] text-[9px] uppercase tracking-[0.18em] text-cyan-400/70 shrink-0">
+        {label}
       </span>
-      <span className={`text-gray-300 ${multiline ? "block mt-1 pl-0" : ""}`}>
+      <span className={`text-gray-300 text-sm ${multiline ? "block mt-1 pl-0" : ""}`}>
         {value}
       </span>
     </div>
@@ -98,7 +98,7 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
         <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 ml-1 block">
           Briefcase
         </span>
-        <div className="bg-card border border-[rgba(251,191,36,0.3)] rounded-[16px_16px_16px_4px] p-4">
+        <div className="gradient-border-cyan bg-card rounded-[16px_16px_16px_4px] p-4">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
             <div className="text-warning">{getActionIcon(action.action)}</div>
@@ -119,14 +119,14 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
           {/* Action details */}
           <div className="mb-4 pl-1">
             {action.action === "sendEmail" && (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2.5 text-sm">
                 <EditableDetailRow label="To" value={(editedDetails.to as string) || ""} editing={editing} onChange={(v) => updateField("to", v)} />
                 <EditableDetailRow label="Subject" value={(editedDetails.subject as string) || ""} editing={editing} onChange={(v) => updateField("subject", v)} />
                 <EditableDetailRow label="Body" value={(editedDetails.body as string) || ""} multiline editing={editing} onChange={(v) => updateField("body", v)} />
               </div>
             )}
             {action.action === "createCalendarEvent" && (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2.5 text-sm">
                 <EditableDetailRow label="Title" value={(editedDetails.summary as string) || ""} editing={editing} onChange={(v) => updateField("summary", v)} />
                 <EditableDetailRow label="Start" value={(editedDetails.start as string) || ""} editing={editing} onChange={(v) => updateField("start", v)} />
                 <EditableDetailRow label="End" value={(editedDetails.end as string) || ""} editing={editing} onChange={(v) => updateField("end", v)} />
@@ -140,16 +140,16 @@ export function ApprovalCard({ action, onApprove, onDeny, status = "pending" }: 
               <Button
                 size="sm"
                 onClick={handleApprove}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg gap-1.5 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-500 hover:shadow-[0_0_16px_rgba(52,211,153,0.25)] text-white rounded-lg gap-1.5 cursor-pointer"
               >
                 <Check className="h-3.5 w-3.5" />
                 {editing ? "Send Edited" : "Approve"}
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={onDeny}
-                className="border-destructive/50 text-destructive hover:bg-destructive/10 rounded-lg gap-1.5 cursor-pointer"
+                className="border border-zinc-700 text-zinc-400 hover:text-destructive hover:border-destructive/50 hover:bg-destructive/5 rounded-lg gap-1.5 cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
                 Deny

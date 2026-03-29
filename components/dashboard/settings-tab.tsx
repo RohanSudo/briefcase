@@ -28,7 +28,7 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
       </span>
 
       {/* HITL Toggle */}
-      <div className="glass-card rounded-xl p-4">
+      <div className="glass-card rounded-xl p-4 hover:border-primary/20 transition-all duration-300">
         <div className="flex items-start justify-between">
           <div className="flex-1 pr-4">
             <p className="text-sm font-medium text-foreground">
@@ -41,13 +41,17 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
           </div>
           <button
             onClick={handleToggle}
-            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 mt-0.5 cursor-pointer ${
-              hitlEnabled ? "bg-primary" : "bg-zinc-600"
+            className={`relative w-12 h-7 rounded-full transition-all duration-300 shrink-0 mt-0.5 cursor-pointer ${
+              hitlEnabled
+                ? "bg-primary shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                : "bg-zinc-700 hover:bg-zinc-600"
             }`}
           >
             <div
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-[left] duration-200"
-              style={{ left: hitlEnabled ? "calc(100% - 22px)" : "2px" }}
+              className={`absolute top-1 w-5 h-5 rounded-full shadow-sm transition-all duration-300 ${
+                hitlEnabled ? "bg-white" : "bg-zinc-400"
+              }`}
+              style={{ left: hitlEnabled ? "calc(100% - 24px)" : "4px" }}
             />
           </button>
         </div>
@@ -73,7 +77,7 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="glass-card rounded-2xl p-6 max-w-sm w-full relative z-10"
+              className="glass-card rounded-2xl p-6 max-w-sm w-full relative z-10 border-warning/20"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-warning/15 flex items-center justify-center">
@@ -95,7 +99,7 @@ export function SettingsTab({ hitlEnabled, onToggleHitl }: SettingsTabProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowWarning(false)}
-                  className="text-muted-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Keep Enabled
                 </Button>

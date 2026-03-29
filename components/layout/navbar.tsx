@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { PanelRight, Plus, LogOut, ChevronDown } from "lucide-react";
+import { PanelRight, Plus, LogOut, ChevronDown, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -47,11 +47,19 @@ export function Navbar({
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="glass-navbar fixed top-0 left-0 right-0 z-50 px-6 py-3"
+      className="fixed top-0 left-0 right-0 z-50 px-6 py-3"
+      style={{
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        background: "rgba(3, 7, 18, 0.7)",
+        borderBottom: "1px solid transparent",
+        borderImage: "linear-gradient(to right, transparent, rgba(6, 182, 212, 0.2), transparent) 1",
+      }}
     >
       <div className="flex items-center justify-between max-w-[1400px] mx-auto">
         {/* Logo */}
         <div className="flex items-center gap-2">
+          <Briefcase className="h-4 w-4 text-primary" />
           <h1 className="font-heading text-lg font-medium tracking-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
             briefcase
           </h1>

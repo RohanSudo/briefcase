@@ -27,12 +27,20 @@ const serviceIcons: Record<string, React.ReactNode> = {
   other: <Mail className="h-3.5 w-3.5" />,
 };
 
+const serviceColors: Record<string, string> = {
+  gmail: "text-red-400",
+  calendar: "text-blue-400",
+  drive: "text-yellow-400",
+  contacts: "text-green-400",
+  other: "text-zinc-400",
+};
+
 const statusConfig: Record<string, { label: string; className: string }> = {
-  auto: { label: "Auto", className: "bg-zinc-400/15 text-zinc-400" },
-  approved: { label: "Approved", className: "bg-success/15 text-success" },
-  denied: { label: "Denied", className: "bg-destructive/15 text-destructive" },
-  error: { label: "Error", className: "bg-destructive/15 text-destructive" },
-  pending: { label: "Pending", className: "bg-warning/15 text-warning" },
+  auto: { label: "Auto", className: "bg-zinc-500/10 text-zinc-400 border border-zinc-700/50" },
+  approved: { label: "Approved", className: "bg-success/10 text-success border border-success/20" },
+  denied: { label: "Denied", className: "bg-destructive/10 text-destructive border border-destructive/20" },
+  error: { label: "Error", className: "bg-destructive/10 text-destructive border border-destructive/20" },
+  pending: { label: "Pending", className: "bg-warning/10 text-warning border border-warning/20" },
 };
 
 const filters = ["all", "gmail", "calendar", "drive", "contacts"] as const;
@@ -83,7 +91,7 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
         {entries.length > 0 && onClear && (
           <button
             onClick={onClear}
-            className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer font-[var(--font-mono)] uppercase tracking-wider"
           >
             Clear
           </button>
@@ -91,15 +99,15 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
       </div>
 
       {/* Filter pills */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5 flex-wrap">
         {filters.map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-2.5 py-1 rounded-full text-[11px] capitalize transition-colors ${
+            className={`px-2.5 py-1 rounded-full text-[11px] capitalize transition-all duration-200 ${
               filter === f
-                ? "bg-primary/15 text-primary border border-primary/30"
-                : "text-muted-foreground hover:text-foreground border border-transparent"
+                ? "bg-primary/15 text-primary border border-primary/30 shadow-[0_0_8px_rgba(6,182,212,0.1)]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border border-transparent"
             }`}
           >
             {f}
@@ -116,6 +124,7 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
         )}
         {filtered.map((entry, i) => {
           const status = statusConfig[entry.status] || statusConfig.auto;
+          const iconColor = serviceColors[entry.service] || serviceColors.other;
           return (
             <motion.div
               key={entry.id}
@@ -123,16 +132,16 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: i * 0.05 }}
             >
-              <div className="flex items-start gap-3 py-2.5">
-                <div className="w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground shrink-0 mt-0.5">
+              <div className="flex items-start gap-3 py-2.5 group hover:bg-muted/10 rounded-lg px-1 -mx-1 transition-colors duration-200">
+                <div className={`w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center shrink-0 mt-0.5 ${iconColor} group-hover:border-primary/20 transition-colors`}>
                   {serviceIcons[entry.service]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground wrap-break-word">
+                  <p className="text-sm text-foreground wrap-break-word leading-snug">
                     {describeAction(entry.toolName, entry.details)}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Badge className={`${status.className} border-0 text-[9px] px-1.5 py-0`}>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className={`${status.className} text-[9px] px-1.5 py-0 rounded-md`}>
                       {status.label}
                     </Badge>
                     <span className="text-[10px] text-zinc-600">
@@ -141,7 +150,7 @@ export function ActivityLogTab({ entries, onClear }: ActivityLogTabProps) {
                   </div>
                 </div>
               </div>
-              {i < filtered.length - 1 && <div className="divider-gradient" />}
+              {i < filtered.length - 1 && <div className="divider-gradient ml-10" />}
             </motion.div>
           );
         })}

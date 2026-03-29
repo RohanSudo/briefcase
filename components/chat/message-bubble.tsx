@@ -26,10 +26,10 @@ export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) 
           </span>
         )}
         <div
-          className={`px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap font-normal ${
+          className={`px-4 py-3 text-[15px] leading-[1.7] whitespace-pre-wrap font-normal ${
             isUser
-              ? "bg-[#0e7490] text-cyan-50 rounded-[16px_16px_4px_16px]"
-              : "bg-card border border-border text-gray-200 rounded-[16px_16px_16px_4px]"
+              ? "bg-linear-to-br from-[#0e7490] to-[#0891b2] text-cyan-50 rounded-[20px_20px_6px_20px]"
+              : "bg-card border border-border border-l-2 border-l-cyan-500/40 text-gray-200 rounded-[20px_20px_20px_6px]"
           }`}
         >
           {isUser ? (
@@ -37,10 +37,10 @@ export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) 
           ) : (
             <ReactMarkdown
               components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                p: ({ children }) => <p className="mb-3 last:mb-0 leading-[1.7]">{children}</p>,
                 strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                ul: ({ children }) => <ul className="list-disc pl-4 mb-2 last:mb-0 space-y-0.5">{children}</ul>,
-                li: ({ children }) => <li>{children}</li>,
+                ul: ({ children }) => <ul className="list-disc pl-4 mb-3 last:mb-0 space-y-1">{children}</ul>,
+                li: ({ children }) => <li className="leading-[1.6]">{children}</li>,
                 code: ({ children }) => <code className="text-sm break-all whitespace-pre-wrap">{children}</code>,
                 pre: ({ children }) => <pre className="overflow-x-auto whitespace-pre-wrap break-words">{children}</pre>,
                 hr: () => <hr className="border-border my-3" />,
@@ -69,7 +69,7 @@ export function TypingIndicator() {
         <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5 ml-1">
           Briefcase
         </span>
-        <div className="bg-card border border-border rounded-[16px_16px_16px_4px] px-4 py-3 flex gap-1.5">
+        <div className="bg-card border border-border border-l-2 border-l-cyan-500/40 rounded-[20px_20px_20px_6px] px-4 py-3 flex gap-1.5">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}

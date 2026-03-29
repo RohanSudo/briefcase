@@ -56,11 +56,13 @@ export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-card rounded-xl p-4"
+            className="glass-card rounded-xl p-4 hover:border-primary/20 transition-all duration-300"
           >
             <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="text-primary">{config.icon}</div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  {config.icon}
+                </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">{config.label}</p>
                   <p className="text-[11px] text-muted-foreground">{config.subtitle}</p>
@@ -72,15 +74,19 @@ export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps
             </div>
 
             {/* Scopes */}
-            <div className="mt-2 mb-3">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                {conn.scopes
-                  .map((s) => {
-                    const short = s.split("/").pop() || s;
-                    return config.scopeLabels[short] || short;
-                  })
-                  .join(", ")}
-              </p>
+            <div className="mt-3 mb-3 flex flex-wrap gap-1.5">
+              {conn.scopes.map((s) => {
+                const short = s.split("/").pop() || s;
+                const label = config.scopeLabels[short] || short;
+                return (
+                  <span
+                    key={s}
+                    className="inline-block px-2 py-0.5 rounded-md bg-muted/50 text-[10px] text-muted-foreground font-[var(--font-mono)]"
+                  >
+                    {label}
+                  </span>
+                );
+              })}
             </div>
 
             {/* Expiry warning */}
@@ -95,7 +101,7 @@ export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps
               variant="ghost"
               size="sm"
               onClick={() => onReconnect(conn.provider)}
-              className="text-primary hover:text-primary/80 gap-1.5 h-7 text-xs"
+              className="text-primary hover:text-primary/80 hover:bg-primary/5 gap-1.5 h-7 text-xs"
             >
               <RefreshCw className="h-3 w-3" />
               {conn.status === "connected" ? "Reconnect" : "Connect"}
