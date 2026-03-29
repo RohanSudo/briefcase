@@ -15,6 +15,7 @@ export interface Connection {
 interface ConnectionsTabProps {
   connections: Connection[];
   onReconnect: (provider: string) => void;
+  onDisconnect?: (provider: string) => void;
 }
 
 const providerConfig = {
@@ -39,7 +40,7 @@ const statusConfig = {
   expiring: { label: "Expiring Soon", className: "bg-warning/15 text-warning" },
 };
 
-export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps) {
+export function ConnectionsTab({ connections, onReconnect, onDisconnect }: ConnectionsTabProps) {
   return (
     <div className="space-y-3">
       <span className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -96,16 +97,28 @@ export function ConnectionsTab({ connections, onReconnect }: ConnectionsTabProps
               </p>
             )}
 
-            {/* Connect/Reconnect button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onReconnect(conn.provider)}
-              className="text-primary hover:text-primary/80 hover:bg-primary/5 gap-1.5 h-7 text-xs"
-            >
-              <RefreshCw className="h-3 w-3" />
-              {conn.status === "connected" ? "Reconnect" : "Connect"}
-            </Button>
+            {/* Connect/Reconnect/Disconnect buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onReconnect(conn.provider)}
+                className="text-primary hover:text-primary/80 hover:bg-primary/5 gap-1.5 h-7 text-xs"
+              >
+                <RefreshCw className="h-3 w-3" />
+                {conn.status === "connected" ? "Reconnect" : "Connect"}
+              </Button>
+              {conn.status === "connected" && onDisconnect && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDisconnect(conn.provider)}
+                  className="text-zinc-400 hover:text-destructive hover:bg-destructive/5 gap-1.5 h-7 text-xs"
+                >
+                  Disconnect
+                </Button>
+              )}
+            </div>
           </motion.div>
         );
       })}

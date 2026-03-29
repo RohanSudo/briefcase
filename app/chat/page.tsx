@@ -335,7 +335,19 @@ export default function ChatPage() {
 
   const handleReconnect = (provider: string) => {
     const connectionName = "google-oauth2";
+    sessionStorage.removeItem("autoConnectTried");
     window.location.href = `/auth/connect?connection=${connectionName}&returnTo=/chat`;
+  };
+
+  const handleDisconnect = (provider: string) => {
+    // Mark as disconnected in UI immediately
+    setConnections((prev) =>
+      prev.map((c) =>
+        c.provider === provider ? { ...c, status: "disconnected" as const, scopes: [] } : c
+      )
+    );
+    // Clear the auto-connect flag so it triggers again on next page load
+    sessionStorage.removeItem("autoConnectTried");
   };
 
   return (
@@ -385,6 +397,7 @@ export default function ChatPage() {
         }}
         hitlEnabled={hitlEnabled}
         onReconnect={handleReconnect}
+        onDisconnect={handleDisconnect}
         onToggleHitl={(enabled) => {
           setHitlEnabled(enabled);
           fetch("/api/settings", {

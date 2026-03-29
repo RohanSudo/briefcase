@@ -15,6 +15,7 @@ interface DashboardPanelProps {
   onClearActivity?: () => void;
   hitlEnabled: boolean;
   onReconnect: (provider: string) => void;
+  onDisconnect?: (provider: string) => void;
   onToggleHitl: (enabled: boolean) => void;
 }
 
@@ -26,6 +27,7 @@ export function DashboardPanel({
   onClearActivity,
   hitlEnabled,
   onReconnect,
+  onDisconnect,
   onToggleHitl,
 }: DashboardPanelProps) {
   return (
@@ -91,6 +93,7 @@ export function DashboardPanel({
                 <ConnectionsTab
                   connections={connections}
                   onReconnect={onReconnect}
+                  onDisconnect={onDisconnect}
                 />
               </TabsContent>
               <TabsContent value="activity" className="mt-0">
