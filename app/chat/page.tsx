@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [connections, setConnections] = useState<Connection[]>([
     { provider: "google", status: "disconnected", scopes: [] },
   ]);
+  const [connectionsLoaded, setConnectionsLoaded] = useState(false);
   const isGoogleConnected = connections.some(
     (c) => c.provider === "google" && c.status === "connected"
   );
@@ -192,8 +193,9 @@ export default function ChatPage() {
             }))
           );
         }
+        setConnectionsLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setConnectionsLoaded(true); });
   }, [isAuthenticated]);
 
   // Fetch activity log from DB
@@ -363,7 +365,7 @@ export default function ChatPage() {
           isPanelOpen ? "md:mr-[360px]" : ""
         }`}
       >
-        {!isGoogleConnected && (
+        {connectionsLoaded && !isGoogleConnected && (
           <div className="absolute top-16 left-0 right-0 z-10 px-4 pt-4" style={{ pointerEvents: "auto" }}>
             <div className="max-w-[800px] mx-auto">
               <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 flex items-start gap-3">
@@ -392,7 +394,7 @@ export default function ChatPage() {
           pendingApprovals={pendingApprovals}
           onApprove={handleApprove}
           onDeny={handleDeny}
-          disabled={!isGoogleConnected}
+          disabled={connectionsLoaded && !isGoogleConnected}
         />
       </main>
 
