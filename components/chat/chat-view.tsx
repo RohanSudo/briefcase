@@ -22,6 +22,7 @@ interface ChatViewProps {
   pendingApprovals?: Map<string, ApprovalData>;
   onApprove?: (id: string, editedDetails?: Record<string, unknown>) => void;
   onDeny?: (id: string) => void;
+  disabled?: boolean;
 }
 
 function getMessageText(msg: UIMessage): string {
@@ -60,6 +61,7 @@ export function ChatView({
   onApprove,
   onDeny,
   messagesLoading,
+  disabled,
 }: ChatViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -207,7 +209,7 @@ export function ChatView({
       </div>
 
       {/* Input */}
-      <ChatInput onSend={onSend} isLoading={isLoading} />
+      <ChatInput onSend={onSend} isLoading={isLoading} disabled={disabled} />
     </div>
   );
 }
