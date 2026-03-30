@@ -67,22 +67,22 @@ export function DashboardPanel({
 
           {/* Tabs */}
           <Tabs defaultValue="connections" className="flex-1 flex flex-col">
-            <TabsList className="mx-4 bg-background/50 border border-border">
+            <TabsList className="mx-4 gap-1 bg-background/50 border border-border">
               <TabsTrigger
                 value="connections"
-                className="text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+                className="text-xs px-4 py-1.5 data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
               >
                 Connections
               </TabsTrigger>
               <TabsTrigger
                 value="activity"
-                className="text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+                className="text-xs px-4 py-1.5 data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
               >
                 Activity
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="text-xs data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+                className="text-xs px-4 py-1.5 data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
               >
                 Settings
               </TabsTrigger>
