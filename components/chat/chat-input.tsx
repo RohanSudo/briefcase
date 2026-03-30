@@ -7,9 +7,11 @@ import { ArrowUp } from "lucide-react";
 interface ChatInputProps {
   onSend: (message: string) => void;
   isLoading: boolean;
+  disabled?: boolean;
+  disabledPlaceholder?: string;
 }
 
-export function ChatInput({ onSend, isLoading }: ChatInputProps) {
+export function ChatInput({ onSend, isLoading, disabled, disabledPlaceholder }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -23,7 +25,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
 
   const handleSubmit = () => {
     const trimmed = value.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || disabled) return;
     onSend(trimmed);
     setValue("");
     if (textareaRef.current) {
@@ -56,8 +58,8 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Briefcase anything..."
-            disabled={isLoading}
+            placeholder={disabled ? (disabledPlaceholder ?? "Connect Google above to start chatting...") : "Ask Briefcase anything..."}
+            disabled={isLoading || !!disabled}
             rows={1}
             style={{ minHeight: "20px", height: "20px" }}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none max-h-40 font-[var(--font-body)] leading-[1.4] py-0 my-0 block focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
