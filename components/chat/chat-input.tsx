@@ -72,7 +72,7 @@ export function ChatInput({ onSend, isLoading, disabled, disabledPlaceholder }: 
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || !!disabled}
                 className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <ArrowUp className="h-4 w-4 text-primary-foreground" />
