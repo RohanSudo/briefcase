@@ -31,6 +31,9 @@ export default function ChatPage() {
   const [connections, setConnections] = useState<Connection[]>([
     { provider: "google", status: "disconnected", scopes: [] },
   ]);
+  const isGoogleConnected = connections.some(
+    (c) => c.provider === "google" && c.status === "connected"
+  );
 
   const [conversationId] = useState(() => {
     if (typeof window !== "undefined") {
@@ -174,7 +177,7 @@ export default function ChatPage() {
       });
   }, []);
 
-  // Check connection status -- auto-connect Google if not connected
+  // Check connection status on load
   useEffect(() => {
     if (!isAuthenticated) return;
     fetch("/api/connections")
@@ -188,16 +191,6 @@ export default function ChatPage() {
               scopes: c.scopes || [],
             }))
           );
-          // Auto-connect Google if not connected yet
-          const google = data.connections.find((c: any) => c.provider === "google");
-          if (!google || google.status !== "connected") {
-            // Check if we already tried (prevent redirect loop)
-            const tried = sessionStorage.getItem("autoConnectTried");
-            if (!tried) {
-              sessionStorage.setItem("autoConnectTried", "true");
-              window.location.href = "/auth/connect?connection=google-oauth2&returnTo=/chat";
-            }
-          }
         }
       })
       .catch(() => {});
@@ -335,19 +328,15 @@ export default function ChatPage() {
 
   const handleReconnect = (provider: string) => {
     const connectionName = "google-oauth2";
-    sessionStorage.removeItem("autoConnectTried");
     window.location.href = `/auth/connect?connection=${connectionName}&returnTo=/chat`;
   };
 
   const handleDisconnect = (provider: string) => {
-    // Mark as disconnected in UI immediately
     setConnections((prev) =>
       prev.map((c) =>
         c.provider === provider ? { ...c, status: "disconnected" as const, scopes: [] } : c
       )
     );
-    // Clear the auto-connect flag so it triggers again on next page load
-    sessionStorage.removeItem("autoConnectTried");
   };
 
   return (
@@ -370,10 +359,31 @@ export default function ChatPage() {
       />
 
       <main
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 relative transition-all duration-300 ${
           isPanelOpen ? "md:mr-[360px]" : ""
         }`}
       >
+        {!isGoogleConnected && (
+          <div className="absolute top-16 left-0 right-0 z-10 px-4 pt-4" style={{ pointerEvents: "auto" }}>
+            <div className="max-w-[800px] mx-auto">
+              <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 flex items-start gap-3">
+                <span className="text-xl leading-none mt-0.5">🔗</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-primary mb-1">Connect your Google services</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    You signed in with Google, but Briefcase also needs permission to access Gmail, Calendar, Drive &amp; Contacts. This is a separate one-time step.
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleReconnect("google")}
+                  className="flex-shrink-0 bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Connect →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <ChatView
           messages={messages}
           isLoading={isLoading}
@@ -382,6 +392,7 @@ export default function ChatPage() {
           pendingApprovals={pendingApprovals}
           onApprove={handleApprove}
           onDeny={handleDeny}
+          disabled={!isGoogleConnected}
         />
       </main>
 
